@@ -44,6 +44,24 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Build and unit test
         run: npm run check
+      - name: Prove manual accessibility scanner on local fixture
+        run: |
+          browser="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$browser" ]; then
+            echo "No browser executable available for Pa11y runtime proof"
+            exit 1
+          fi
+          export PUPPETEER_EXECUTABLE_PATH="$browser"
+          node -e 'const http=require("node:http");const html=`<!doctype html><html lang="en"><head><title>DexFoundry fixture</title></head><body><img src="/hero.png"><button></button><main><h1>Fixture</h1></main></body></html>`;http.createServer((req,res)=>{res.writeHead(200,{"content-type":"text/html; charset=utf-8"});res.end(html)}).listen(8899,"127.0.0.1")' > "$RUNNER_TEMP/a11y-fixture.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/a11y-fixture.pid"
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8899/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8899/ >/dev/null
+          npm run --silent a11y:manual-proof -- --name "DexFoundry CI fixture" http://127.0.0.1:8899/ > "$RUNNER_TEMP/a11y-proof.json"
+          node -e 'const fs=require("node:fs");const p=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/a11y-proof.json","utf8"));if(p.proofState!=="MANUAL_REVIEW_REQUIRED")throw new Error("wrong proof state");if(p.signals.visibleProblem!==true)throw new Error("fixture should expose visible problems");if(!Array.isArray(p.evidence)||p.evidence.length<2)throw new Error("missing scan evidence");if(p.poc?.metadata?.conformanceDetermination!==false)throw new Error("POC lost non-conformance guard");console.log(`Accessibility fixture proof passed with ${p.evidence.length} evidence records.`)'
+          kill "$(cat "$RUNNER_TEMP/a11y-fixture.pid")" 2>/dev/null || true
       - name: Apply database migrations
         run: npm run db:migrate
       - name: Prove migrations are idempotent
@@ -129,5 +147,6 @@ jobs:
         run: |
           docker rm -f dexfoundry-n8n 2>/dev/null || true
           docker volume rm dexfoundry_n8n_data 2>/dev/null || true
+          if [ -f "$RUNNER_TEMP/a11y-fixture.pid" ]; then kill "$(cat "$RUNNER_TEMP/a11y-fixture.pid")" 2>/dev/null || true; fi
           if [ -f "$RUNNER_TEMP/n8n.pid" ]; then kill "$(cat "$RUNNER_TEMP/n8n.pid")" 2>/dev/null || true; fi
           if [ -f "$RUNNER_TEMP/dexfoundry-results.pid" ]; then kill "$(cat "$RUNNER_TEMP/dexfoundry-results.pid")" 2>/dev/null || true; fi
