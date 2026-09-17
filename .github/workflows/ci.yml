@@ -34,15 +34,7 @@ jobs:
       DEXFOUNDRY_RESULT_HOST: 127.0.0.1
       DEXFOUNDRY_RESULT_PORT: "8787"
       N8N_WEBHOOK_URL: http://127.0.0.1:5678/webhook/dexfoundry-proof
-      N8N_USER_FOLDER: /tmp/dexfoundry-n8n
-      N8N_HOST: 127.0.0.1
-      N8N_PORT: "5678"
-      N8N_PROTOCOL: http
-      N8N_SECURE_COOKIE: "false"
-      N8N_DIAGNOSTICS_ENABLED: "false"
-      N8N_PERSONALIZATION_ENABLED: "false"
-      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
-      NODE_FUNCTION_ALLOW_BUILTIN: crypto
+      N8N_IMAGE: docker.n8n.io/n8nio/n8n:2.39.7
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -58,19 +50,39 @@ jobs:
         run: npm run db:migrate
       - name: Prove persistence and workflow-result idempotency
         run: npm run db:smoke
-      - name: Import and publish pinned n8n proof workflow
+      - name: Prepare pinned n8n proof instance
         run: |
-          rm -rf "$N8N_USER_FOLDER"
-          mkdir -p "$N8N_USER_FOLDER"
-          npx --yes n8n@2.39.7 user-management:reset
-          npx --yes n8n@2.39.7 import:workflow --input=workflows/n8n/signed-proof-loop.json
-          npx --yes n8n@2.39.7 publish:workflow --id=DFProofN8n000001
+          docker pull "$N8N_IMAGE"
+          docker volume create dexfoundry_n8n_data >/dev/null
+          docker run --rm \
+            -v dexfoundry_n8n_data:/home/node/.n8n \
+            "$N8N_IMAGE" user-management:reset
+          docker run --rm \
+            -v dexfoundry_n8n_data:/home/node/.n8n \
+            -v "$GITHUB_WORKSPACE/workflows/n8n:/workflows:ro" \
+            "$N8N_IMAGE" import:workflow --input=/workflows/signed-proof-loop.json
+          docker run --rm \
+            -v dexfoundry_n8n_data:/home/node/.n8n \
+            "$N8N_IMAGE" publish:workflow --id=DFProofN8n000001
       - name: Start n8n and DexFoundry result receiver
         run: |
           npm run results:serve > "$RUNNER_TEMP/dexfoundry-results.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/dexfoundry-results.pid"
-          npx --yes n8n@2.39.7 start > "$RUNNER_TEMP/n8n.log" 2>&1 &
+          docker run --rm --name dexfoundry-n8n --network host \
+            -v dexfoundry_n8n_data:/home/node/.n8n \
+            -e N8N_HOST=127.0.0.1 \
+            -e N8N_PORT=5678 \
+            -e N8N_PROTOCOL=http \
+            -e N8N_SECURE_COOKIE=false \
+            -e N8N_DIAGNOSTICS_ENABLED=false \
+            -e N8N_PERSONALIZATION_ENABLED=false \
+            -e N8N_BLOCK_ENV_ACCESS_IN_NODE=false \
+            -e NODE_FUNCTION_ALLOW_BUILTIN=crypto \
+            -e DEXFOUNDRY_WEBHOOK_SECRET="$DEXFOUNDRY_WEBHOOK_SECRET" \
+            -e DEXFOUNDRY_CALLBACK_URL="$DEXFOUNDRY_CALLBACK_URL" \
+            "$N8N_IMAGE" start > "$RUNNER_TEMP/n8n.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/n8n.pid"
+
           for i in $(seq 1 90); do
             if curl -fsS http://127.0.0.1:8787/healthz >/dev/null && curl -fsS http://127.0.0.1:5678/healthz >/dev/null; then
               break
@@ -115,5 +127,7 @@ jobs:
       - name: Stop orchestration proof processes
         if: always()
         run: |
+          docker rm -f dexfoundry-n8n 2>/dev/null || true
+          docker volume rm dexfoundry_n8n_data 2>/dev/null || true
           if [ -f "$RUNNER_TEMP/n8n.pid" ]; then kill "$(cat "$RUNNER_TEMP/n8n.pid")" 2>/dev/null || true; fi
           if [ -f "$RUNNER_TEMP/dexfoundry-results.pid" ]; then kill "$(cat "$RUNNER_TEMP/dexfoundry-results.pid")" 2>/dev/null || true; fi
