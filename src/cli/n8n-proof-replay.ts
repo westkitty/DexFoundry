@@ -7,6 +7,18 @@ if (!idempotencyKey) throw new Error("Usage: n8n-proof-replay <idempotency-key>"
 
 const db = PostgresClient.fromConnectionString(connectionString);
 try {
+  const current = await db.query<{ status: string; attempts: number; last_error: string | null }>(
+    `SELECT status, attempts, last_error
+     FROM foundry_outbox
+     WHERE idempotency_key = $1`,
+    [idempotencyKey]
+  );
+  const row = current.rows[0];
+  if (!row) throw new Error(`Missing outbox row for ${idempotencyKey}`);
+  if (row.status !== "PUBLISHED") {
+    throw new Error(`First n8n delivery was not published: ${JSON.stringify(row)}`);
+  }
+
   const result = await db.query(
     `UPDATE foundry_outbox
      SET status = 'PENDING', available_at = now(), locked_at = NULL, published_at = NULL
