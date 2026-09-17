@@ -1,4 +1,5 @@
 import { assertTransition, type LeadState } from "../domain/state.js";
+import type { WorkflowResult } from "../orchestration/contracts.js";
 import type { SqlClient, SqlExecutor } from "./sql.js";
 
 interface CompanyRow extends Record<string, unknown> {
@@ -9,6 +10,17 @@ interface CompanyRow extends Record<string, unknown> {
 
 interface EventRow extends Record<string, unknown> {
   id: string;
+}
+
+interface ResultRow extends Record<string, unknown> {
+  id: string;
+  result_hash: string;
+}
+
+interface ResultContextRow extends Record<string, unknown> {
+  outbox_id: string;
+  event_id: string;
+  company_id: string;
 }
 
 export interface TransitionInput {
@@ -27,6 +39,14 @@ export interface OutboxItem extends Record<string, unknown> {
   idempotency_key: string;
   payload: Record<string, unknown>;
   attempts: number;
+  created_at: string;
+}
+
+export class WorkflowResultConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "WorkflowResultConflictError";
+  }
 }
 
 export class FoundryRepository {
@@ -47,14 +67,7 @@ export class FoundryRepository {
           (company_id, event_type, state_before, state_after, source, confidence, payload)
          VALUES ($1, 'STATE_TRANSITION', $2, $3, $4, $5, $6::jsonb)
          RETURNING id`,
-        [
-          input.companyId,
-          company.state,
-          input.to,
-          input.source,
-          input.confidence ?? null,
-          JSON.stringify(input.payload ?? {})
-        ]
+        [input.companyId, company.state, input.to, input.source, input.confidence ?? null, JSON.stringify(input.payload ?? {})]
       );
       const eventId = requireSingle(event.rows, "state transition event").id;
 
@@ -77,10 +90,7 @@ export class FoundryRepository {
 
     return this.db.transaction(async (tx) => {
       await this.lockCompany(tx, companyId);
-      await tx.query(
-        "UPDATE companies SET opportunity_score = $2, updated_at = now() WHERE id = $1",
-        [companyId, score]
-      );
+      await tx.query("UPDATE companies SET opportunity_score = $2, updated_at = now() WHERE id = $1", [companyId, score]);
 
       const event = await tx.query<EventRow>(
         `INSERT INTO foundry_events (company_id, event_type, source, payload)
@@ -115,9 +125,7 @@ export class FoundryRepository {
   }
 
   async claimOutbox(limit = 50): Promise<OutboxItem[]> {
-    if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
-      throw new Error("Outbox claim limit must be 1..500");
-    }
+    if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new Error("Outbox claim limit must be 1..500");
 
     return this.db.transaction(async (tx) => {
       const result = await tx.query<OutboxItem>(
@@ -132,11 +140,24 @@ export class FoundryRepository {
          SET status = 'PROCESSING', locked_at = now(), attempts = attempts + 1
          FROM candidates c
          WHERE o.id = c.id
-         RETURNING o.id, o.event_id, o.company_id, o.topic, o.idempotency_key, o.payload, o.attempts`,
+         RETURNING o.id, o.event_id, o.company_id, o.topic, o.idempotency_key, o.payload, o.attempts, o.created_at::text`,
         [limit]
       );
       return result.rows;
     });
+  }
+
+  async requeueStaleOutbox(staleAfterSeconds = 900): Promise<number> {
+    if (!Number.isFinite(staleAfterSeconds) || staleAfterSeconds < 1) throw new Error("staleAfterSeconds must be positive");
+    const result = await this.db.query(
+      `UPDATE foundry_outbox
+       SET status = 'PENDING', locked_at = NULL,
+           available_at = now(), last_error = 'Recovered stale PROCESSING claim'
+       WHERE status = 'PROCESSING'
+         AND locked_at < now() - ($1 * interval '1 second')`,
+      [staleAfterSeconds]
+    );
+    return result.rowCount;
   }
 
   async markOutboxPublished(id: string): Promise<void> {
@@ -147,9 +168,7 @@ export class FoundryRepository {
   }
 
   async releaseOutbox(id: string, error: string, retryDelaySeconds = 60): Promise<void> {
-    if (!Number.isFinite(retryDelaySeconds) || retryDelaySeconds < 0) {
-      throw new Error("retryDelaySeconds must be non-negative");
-    }
+    if (!Number.isFinite(retryDelaySeconds) || retryDelaySeconds < 0) throw new Error("retryDelaySeconds must be non-negative");
     await this.db.query(
       `UPDATE foundry_outbox
        SET status = 'PENDING', locked_at = NULL, last_error = $2,
@@ -159,11 +178,54 @@ export class FoundryRepository {
     );
   }
 
+  async recordWorkflowResult(result: WorkflowResult, resultHash: string): Promise<{ resultId: string; duplicate: boolean }> {
+    return this.db.transaction(async (tx) => {
+      const context = await tx.query<ResultContextRow>(
+        `SELECT id AS outbox_id, event_id, company_id
+         FROM foundry_outbox
+         WHERE idempotency_key = $1
+         FOR UPDATE`,
+        [result.idempotencyKey]
+      );
+      const matched = requireSingle(context.rows, `outbox item for ${result.idempotencyKey}`);
+
+      const existing = await tx.query<ResultRow>(
+        `SELECT id, result_hash FROM workflow_results
+         WHERE idempotency_key = $1 AND workflow = $2`,
+        [result.idempotencyKey, result.workflow]
+      );
+      if (existing.rowCount > 0) {
+        const row = requireSingle(existing.rows, "existing workflow result");
+        if (row.result_hash !== resultHash) {
+          throw new WorkflowResultConflictError(`Conflicting result for ${result.idempotencyKey}/${result.workflow}`);
+        }
+        return { resultId: row.id, duplicate: true };
+      }
+
+      const inserted = await tx.query<{ id: string }>(
+        `INSERT INTO workflow_results
+          (idempotency_key, workflow, outbox_id, event_id, company_id, status, result_hash, outputs, error, completed_at)
+         VALUES ($1, $2, $3::uuid, $4::uuid, $5::uuid, $6, $7, $8::jsonb, $9::jsonb, $10::timestamptz)
+         RETURNING id`,
+        [
+          result.idempotencyKey,
+          result.workflow,
+          matched.outbox_id,
+          matched.event_id,
+          matched.company_id,
+          result.status,
+          resultHash,
+          result.outputs === undefined ? null : JSON.stringify(result.outputs),
+          result.error === undefined ? null : JSON.stringify(result.error),
+          result.completedAt
+        ]
+      );
+      return { resultId: requireSingle(inserted.rows, "workflow result").id, duplicate: false };
+    });
+  }
+
   private async lockCompany(tx: SqlExecutor, companyId: string): Promise<CompanyRow> {
-    const result = await tx.query<CompanyRow>(
-      "SELECT id, state, opportunity_score FROM companies WHERE id = $1 FOR UPDATE",
-      [companyId]
-    );
+    const result = await tx.query<CompanyRow>("SELECT id, state, opportunity_score FROM companies WHERE id = $1 FOR UPDATE", [companyId]);
     return requireSingle(result.rows, `company ${companyId}`);
   }
 }

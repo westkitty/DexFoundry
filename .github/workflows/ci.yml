@@ -42,5 +42,5 @@ jobs:
         run: npm run db:migrate
       - name: Prove migrations are idempotent
         run: npm run db:migrate
-      - name: Prove state, event, score, and outbox persistence
+      - name: Prove persistence and workflow-result idempotency
         run: npm run db:smoke
