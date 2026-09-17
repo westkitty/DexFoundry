@@ -3,7 +3,7 @@
 - **Project ID:** dexfoundry
 - **Project:** DexFoundry
 - **Repository:** westkitty/DexFoundry
-- **Revision:** 5
+- **Revision:** 6
 - **State:** active-first-offer-manual-proof
 
 ## Purpose
@@ -32,16 +32,20 @@ Implemented in source:
 - Initial human gates protect new campaigns, unusual contracts, and destructive/security-sensitive customer operations.
 - First offer hypothesis: **Accessibility Regression Watch** for agencies and other operators maintaining public website portfolios.
 - `AccessibilityRegressionWatchAdapter` converts normalized automated accessibility findings into evidence, deterministic opportunity signals, and an evidence-grounded POC.
-- The offer is explicitly scanner-agnostic through `AccessibilityScanProvider`; no live Pa11y/axe scanner integration has yet been promoted.
+- `Pa11yAccessibilityScanner` is the canonical concrete scanner provider behind `AccessibilityScanProvider`, using pinned `pa11y` 10.0.0.
+- `npm run a11y:manual-proof -- --name "Company" <url> [url ...]` runs the bounded manual-proof path for at most three explicit public HTTP(S) URLs.
 - The offer POC explicitly states that automated findings are not a WCAG conformance determination, legal opinion, or substitute for knowledgeable human accessibility evaluation.
 - The offer remains marked `manual-proof-required`; no prospect outreach, compliance claims, or autonomous sale path is enabled.
 
 ## Verified
 
-At commit `3447ddb3227429a0d11ba0c7f11e9e5313493d54`, GitHub Actions run `35282883024` passed the complete existing validation path after adding and exporting the Accessibility Regression Watch adapter and its tests:
+At commit `f901a0df95c4b378f993d13ab5bcf278f7ed5b43`, GitHub Actions run `35284098870` passed the complete validation path:
 
-- Node 24 dependency installation and TypeScript compilation
-- complete unit-test suite, including accessibility-offer target normalization, observed-problem detection, evidence grounding, and clean-scan behavior
+- Node 24 dependency installation
+- TypeScript compilation and full unit-test suite
+- Accessibility Regression Watch adapter tests
+- Pa11y normalization/configuration tests
+- real browser-backed Pa11y execution against a controlled local fixture through the manual accessibility proof path
 - PostgreSQL migrations `001_foundation.sql`, `002_workflow_results.sql`, and `003_workflow_delivery_receipts.sql`
 - repeated migration with no reapplication
 - live PostgreSQL smoke proof of state, score, event, outbox, result persistence, duplicate-delivery accounting, and conflicting-result rejection
@@ -52,7 +56,9 @@ At commit `3447ddb3227429a0d11ba0c7f11e9e5313493d54`, GitHub Actions run `352828
 - deliberate duplicate redelivery proof preserving one durable result
 - clean orchestration proof-process teardown
 
-Revision 4's end-to-end orchestration proof therefore remains intact after the first offer adapter was introduced.
+The concrete accessibility scanner runtime is therefore verified on the CI fixture while all previously proven orchestration and persistence invariants remain intact.
+
+A stale-tree consolidation attempt briefly removed the wrong Pa11y implementation and correctly failed CI at TypeScript compilation. Repository authority was re-resolved from the actual commit chain: `main` had already selected the direct JS `Pa11yAccessibilityScanner` path and removed the earlier CLI-spawn provider. The direct provider, type boundary, tests, manual-proof CLI imports, and package export were restored/aligned before this revision was promoted.
 
 Research-backed product boundary recorded in `docs/OFFER_ACCESSIBILITY_REGRESSION_WATCH.md`: the product is machine-detectable accessibility **regression monitoring**, not an automated claim of accessibility compliance.
 
@@ -60,9 +66,8 @@ GitHub repository existence and write access remain verified.
 
 ## Implemented but unverified
 
-- A concrete Pa11y/axe scanner implementation behind `AccessibilityScanProvider`.
 - Real scans against representative target-ICP websites.
-- Stability/repeatability of findings across real sites and repeated runs.
+- Stability/repeatability of findings across real public sites and repeated runs.
 - Human usefulness of generated accessibility-regression POCs.
 - Willingness to pay, pricing, close rate, or commercial demand for this offer.
 - Long-running/production n8n deployment and process supervision outside disposable CI.
@@ -74,13 +79,12 @@ GitHub repository existence and write access remain verified.
 
 ## Pending
 
-1. Implement one bounded live scanner provider, initially Pa11y and/or axe-core, without coupling the offer contract to scanner-specific output.
-2. Manually run the offer on at least five representative public sites from the target ICP and record false positives, instability, blocked scans, and human-judgment gaps.
-3. Produce at least three real evidence-backed POCs manually.
-4. Obtain at least one target buyer/operator reaction and attempt a manual sale before automating prospecting/outreach.
-5. Only after manual proof: add Apollo enrichment and controlled discovery for this offer.
-6. Add deliverability, suppression, rate, and campaign approval controls before any real outbound email is enabled.
-7. Add customer reporting, health scoring, churn, and expansion loops after initial service delivery is manually proven.
+1. Manually run the offer on at least five representative public sites from the target ICP and record false positives, instability, blocked scans, and human-judgment gaps.
+2. Produce at least three real evidence-backed POCs manually.
+3. Obtain at least one target buyer/operator reaction and attempt a manual sale before automating prospecting/outreach.
+4. Only after manual proof: add Apollo enrichment and controlled discovery for this offer.
+5. Add deliverability, suppression, rate, and campaign approval controls before any real outbound email is enabled.
+6. Add customer reporting, health scoring, churn, and expansion loops after initial service delivery is manually proven.
 
 ## Protected invariants
 
@@ -99,8 +103,12 @@ GitHub repository existence and write access remain verified.
 - Automated accessibility findings may not be represented as proof of WCAG conformance or legal compliance.
 - A clean automated accessibility scan may not be represented as proof that a page is accessible.
 - Accessibility Regression Watch may not begin automated prospect outreach while its commercial proof state is `manual-proof-required`.
+- Runtime proof on a controlled fixture does not count as target-market or commercial proof.
 
 ## Revision history
+
+### Revision 6 - 2026-09-17
+Pinned Pa11y 10.0.0, wired the concrete `Pa11yAccessibilityScanner`, exposed the bounded manual-proof command, and added a real browser-backed local-fixture proof to CI. A stale-tree cleanup briefly removed the wrong provider path; CI caught the broken imports, repository authority was re-resolved from the current commit chain, and the canonical direct provider was restored. GitHub Actions run `35284098870` at commit `f901a0df95c4b378f993d13ab5bcf278f7ed5b43` passed build/tests, real Pa11y fixture execution, all Postgres proofs, and the full signed n8n duplicate-delivery loop. The scanner runtime is now proven; the offer remains commercially unproven and manually gated.
 
 ### Revision 5 - 2026-09-17
 Selected Accessibility Regression Watch as the first bounded offer hypothesis after comparative research. Added a scanner-agnostic accessibility adapter, normalized evidence model, deterministic pain signals, evidence-grounded automated-only POC, tests, package export, and a manual-proof gate document. GitHub Actions run `35282883024` passed the complete existing orchestration/database proof after the adapter was added. This verifies the software contract, not commercial demand or real-world scan quality. The offer remains explicitly `manual-proof-required`.
