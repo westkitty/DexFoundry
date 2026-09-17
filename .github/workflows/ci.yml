@@ -73,15 +73,30 @@ jobs:
           echo $! > "$RUNNER_TEMP/n8n.pid"
           for i in $(seq 1 90); do
             if curl -fsS http://127.0.0.1:8787/healthz >/dev/null && curl -fsS http://127.0.0.1:5678/healthz >/dev/null; then
-              exit 0
+              break
             fi
             sleep 1
           done
-          echo "DexFoundry result receiver log:"
-          cat "$RUNNER_TEMP/dexfoundry-results.log" || true
-          echo "n8n log:"
-          cat "$RUNNER_TEMP/n8n.log" || true
-          exit 1
+          curl -fsS http://127.0.0.1:8787/healthz >/dev/null
+          curl -fsS http://127.0.0.1:5678/healthz >/dev/null
+
+          webhook_ready=false
+          for i in $(seq 1 60); do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' --data '{}' "$N8N_WEBHOOK_URL" || true)"
+            if [ "$status" != "404" ] && [ "$status" != "000" ]; then
+              webhook_ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$webhook_ready" != "true" ]; then
+            echo "n8n became healthy but production webhook never registered"
+            echo "DexFoundry result receiver log:"
+            cat "$RUNNER_TEMP/dexfoundry-results.log" || true
+            echo "n8n log:"
+            cat "$RUNNER_TEMP/n8n.log" || true
+            exit 1
+          fi
       - name: Prove live n8n dispatch, signed callback, and duplicate delivery
         run: |
           proof_json="$(npm run --silent n8n:proof:seed)"
