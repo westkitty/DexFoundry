@@ -14,7 +14,8 @@
     "results:serve": "node dist/src/cli/workflow-result-server.js",
     "n8n:proof:seed": "node dist/src/cli/n8n-proof-seed.js",
     "n8n:proof:replay": "node dist/src/cli/n8n-proof-replay.js",
-    "n8n:proof:assert": "node dist/src/cli/n8n-proof-assert.js"
+    "n8n:proof:assert": "node dist/src/cli/n8n-proof-assert.js",
+    "a11y:manual-proof": "node dist/src/cli/accessibility-manual-proof.js"
   },
   "engines": {
     "node": ">=22.13.0"
