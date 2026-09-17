@@ -1,5 +1,6 @@
 import { assertTransition, type LeadState } from "../domain/state.js";
 import type { WorkflowResult } from "../orchestration/contracts.js";
+import { evaluateOutboundPolicy, type OutboundDecision, type OutboundMode } from "../outbound/policy.js";
 import type { SqlClient, SqlExecutor } from "./sql.js";
 
 interface CompanyRow extends Record<string, unknown> {
@@ -119,6 +120,29 @@ export class FoundryRepository {
       [email ?? null, domain ?? null]
     );
     return result.rowCount > 0;
+  }
+
+  async getOutboundMode(): Promise<OutboundMode> {
+    const result = await this.db.query<{ mode: OutboundMode }>(
+      "SELECT mode FROM outbound_controls WHERE control_key = 'global'"
+    );
+    return requireSingle(result.rows, "global outbound control").mode;
+  }
+
+  async evaluateOutboundPermission(input: {
+    email?: string;
+    domain?: string;
+    manualApproved?: boolean;
+  }): Promise<OutboundDecision> {
+    const [mode, suppressed] = await Promise.all([
+      this.getOutboundMode(),
+      this.isSuppressed(input.email, input.domain)
+    ]);
+    return evaluateOutboundPolicy({
+      mode,
+      suppressed,
+      manualApproved: input.manualApproved
+    });
   }
 
   async claimOutbox(limit = 50): Promise<OutboxItem[]> {
