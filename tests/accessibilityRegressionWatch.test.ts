@@ -3,6 +3,7 @@ import { assertGroundedPoc, type CompanySnapshot } from "../src/offers/contracts
 import {
   AccessibilityRegressionWatchAdapter,
   auditTargetsForCompany,
+  representativeErrorFindings,
   type AccessibilityScanProvider
 } from "../src/offers/accessibilityRegressionWatch.js";
 
@@ -62,6 +63,19 @@ describe("AccessibilityRegressionWatchAdapter", () => {
     expect(poc.metadata).toMatchObject({ automatedOnly: true, conformanceDetermination: false });
     expect(poc.summary).toMatch(/not a WCAG conformance determination/i);
     expect(() => assertGroundedPoc(poc, detection.evidence)).not.toThrow();
+  });
+
+  it("selects representative POC evidence by distinct rule class", () => {
+    const findings = [
+      { code: "color-contrast", message: "Contrast 1", level: "error" as const, selector: "#one" },
+      { code: "color-contrast", message: "Contrast 2", level: "error" as const, selector: "#two" },
+      { code: "button-name", message: "Button name", level: "error" as const, selector: "button" },
+      { code: "notice-only", message: "Notice", level: "notice" as const }
+    ];
+    expect(representativeErrorFindings(findings).map((finding) => finding.code)).toEqual([
+      "color-contrast",
+      "button-name"
+    ]);
   });
 
   it("does not invent a visible problem when an automated scan returns no errors", async () => {
