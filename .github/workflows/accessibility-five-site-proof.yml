@@ -1,0 +1,119 @@
+name: Accessibility Five-Site Manual Proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/accessibility-five-site-proof.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Install and build
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+      - name: Locate browser
+        run: |
+          browser="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$browser" ]; then
+            echo "No browser executable available for Pa11y manual proof"
+            exit 1
+          fi
+          echo "PUPPETEER_EXECUTABLE_PATH=$browser" >> "$GITHUB_ENV"
+      - name: Attempt five representative agency scans
+        run: |
+          mkdir -p proof-output
+          cat > "$RUNNER_TEMP/targets.tsv" <<'EOF'
+          work-co	Work & Co	https://work.co/
+          instrument	Instrument	https://www.instrument.com/
+          code-and-theory	Code and Theory	https://www.codeandtheory.com/
+          rga	R/GA	https://rga.com/
+          huge	Huge	https://www.hugeinc.com/
+          EOF
+
+          attempts=0
+          successes=0
+          while IFS=$'\t' read -r slug name url; do
+            [ -n "$slug" ] || continue
+            attempts=$((attempts + 1))
+            echo "Scanning $name — $url"
+            set +e
+            node dist/src/cli/accessibility-manual-proof.js --name "$name" "$url" > "proof-output/$slug.json" 2> "proof-output/$slug.stderr.txt"
+            status=$?
+            set -e
+            printf '%s\n' "$status" > "proof-output/$slug.exit-code.txt"
+            if [ "$status" -eq 0 ]; then
+              successes=$((successes + 1))
+            else
+              rm -f "proof-output/$slug.json"
+            fi
+          done < "$RUNNER_TEMP/targets.tsv"
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const dir = 'proof-output';
+          const slugs = ['work-co','instrument','code-and-theory','rga','huge'];
+          const rows = slugs.map((slug) => {
+            const exitCode = Number(fs.readFileSync(path.join(dir, `${slug}.exit-code.txt`), 'utf8').trim());
+            const stderrPath = path.join(dir, `${slug}.stderr.txt`);
+            const stderr = fs.existsSync(stderrPath) ? fs.readFileSync(stderrPath, 'utf8').trim() : '';
+            const jsonPath = path.join(dir, `${slug}.json`);
+            if (exitCode !== 0 || !fs.existsSync(jsonPath)) {
+              return { slug, status: 'FAILED_OR_BLOCKED', exitCode, stderr: stderr.slice(0, 2000) };
+            }
+            const proof = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+            const summaries = Array.isArray(proof.evidence)
+              ? proof.evidence.filter((item) => item?.metadata?.kind === 'automated-accessibility-scan-summary')
+              : [];
+            const errors = summaries.reduce((sum, item) => sum + Number(item?.metadata?.errors ?? 0), 0);
+            const warnings = summaries.reduce((sum, item) => sum + Number(item?.metadata?.warnings ?? 0), 0);
+            return {
+              slug,
+              status: 'SCANNED',
+              exitCode,
+              visibleProblem: proof?.signals?.visibleProblem === true,
+              highSeverity: proof?.signals?.highSeverity === true,
+              evidenceRecords: Array.isArray(proof.evidence) ? proof.evidence.length : 0,
+              errors,
+              warnings,
+              conformanceDetermination: proof?.poc?.metadata?.conformanceDetermination
+            };
+          });
+          const summary = {
+            proofState: 'MANUAL_REVIEW_REQUIRED',
+            generatedAt: new Date().toISOString(),
+            attempted: rows.length,
+            scanned: rows.filter((row) => row.status === 'SCANNED').length,
+            failedOrBlocked: rows.filter((row) => row.status !== 'SCANNED').length,
+            rows
+          };
+          fs.writeFileSync(path.join(dir, 'summary.json'), JSON.stringify(summary, null, 2) + '\n');
+          console.log(JSON.stringify(summary, null, 2));
+          if (summary.attempted !== 5) throw new Error('Expected exactly five recorded attempts');
+          if (summary.scanned === 0) throw new Error('No target completed a scanner run');
+          for (const row of rows) {
+            if (row.status === 'SCANNED' && row.conformanceDetermination !== false) {
+              throw new Error(`${row.slug} lost the non-conformance guard`);
+            }
+          }
+          NODE
+      - name: Upload raw proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-five-site-proof
+          path: proof-output/
+          if-no-files-found: error
+          retention-days: 30
