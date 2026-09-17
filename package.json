@@ -1,6 +1,6 @@
 {
   "name": "dexfoundry",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Autonomous B2B service operations engine.",
@@ -11,7 +11,10 @@
     "db:migrate": "node dist/src/cli/migrate.js",
     "db:smoke": "node dist/src/cli/db-smoke.js",
     "dispatch:once": "node dist/src/cli/dispatch.js",
-    "results:serve": "node dist/src/cli/workflow-result-server.js"
+    "results:serve": "node dist/src/cli/workflow-result-server.js",
+    "n8n:proof:seed": "node dist/src/cli/n8n-proof-seed.js",
+    "n8n:proof:replay": "node dist/src/cli/n8n-proof-replay.js",
+    "n8n:proof:assert": "node dist/src/cli/n8n-proof-assert.js"
   },
   "engines": {
     "node": ">=22"

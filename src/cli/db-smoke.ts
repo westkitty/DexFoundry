@@ -68,23 +68,25 @@ try {
     event_count: string;
     outbox_count: string;
     result_count: string;
+    delivery_count: number;
     opportunity_score: number;
     state: string;
   }>(
     `SELECT c.state, c.opportunity_score,
        (SELECT count(*)::text FROM foundry_events e WHERE e.company_id = c.id) AS event_count,
        (SELECT count(*)::text FROM foundry_outbox o WHERE o.company_id = c.id) AS outbox_count,
-       (SELECT count(*)::text FROM workflow_results r WHERE r.company_id = c.id) AS result_count
+       (SELECT count(*)::text FROM workflow_results r WHERE r.company_id = c.id) AS result_count,
+       (SELECT delivery_count FROM workflow_results r WHERE r.company_id = c.id LIMIT 1) AS delivery_count
      FROM companies c WHERE c.id = $1`,
     [company.id]
   );
   const row = proof.rows[0];
-  if (!row || row.state !== "SIGNAL_DETECTED" || row.opportunity_score !== 85 || row.event_count !== "2" || row.outbox_count !== "2" || row.result_count !== "1") {
+  if (!row || row.state !== "SIGNAL_DETECTED" || row.opportunity_score !== 85 || row.event_count !== "2" || row.outbox_count !== "2" || row.result_count !== "1" || row.delivery_count !== 2) {
     throw new Error(`Persistence proof failed: ${JSON.stringify(row)}`);
   }
 
   await db.query("DELETE FROM companies WHERE id = $1", [company.id]);
-  console.log("DexFoundry database smoke test passed, including workflow-result idempotency.");
+  console.log("DexFoundry database smoke test passed, including duplicate-delivery accounting and conflict rejection.");
 } finally {
   await db.close();
 }

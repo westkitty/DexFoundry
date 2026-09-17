@@ -1,0 +1,64 @@
+{
+  "id": "DFProofN8n000001",
+  "name": "DexFoundry Signed Proof Loop",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dexfoundry-proof",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "dexfoundry-proof-webhook",
+      "name": "DexFoundry Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "webhookId": "dexfoundry-proof-v1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst incoming = $input.first().json;\nconst headers = incoming.headers ?? {};\nconst body = incoming.body ?? {};\nconst secret = $env.DEXFOUNDRY_WEBHOOK_SECRET;\nif (typeof secret !== 'string' || secret.length < 32) throw new Error('DexFoundry webhook secret is missing or too short');\nconst timestamp = String(headers['x-dexfoundry-timestamp'] ?? '');\nconst signature = String(headers['x-dexfoundry-signature'] ?? '');\nconst idempotencyHeader = String(headers['x-dexfoundry-idempotency-key'] ?? '');\nconst parsedTimestamp = Number(timestamp);\nif (!Number.isInteger(parsedTimestamp) || parsedTimestamp <= 0) throw new Error('Invalid DexFoundry timestamp');\nconst nowSeconds = Math.floor(Date.now() / 1000);\nif (Math.abs(nowSeconds - parsedTimestamp) > 300) throw new Error('DexFoundry timestamp outside replay window');\nconst rawIncoming = JSON.stringify(body);\nconst expected = 'v1=' + crypto.createHmac('sha256', secret).update(timestamp + '.' + rawIncoming, 'utf8').digest('hex');\nconst actualBuffer = Buffer.from(signature, 'utf8');\nconst expectedBuffer = Buffer.from(expected, 'utf8');\nif (actualBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(actualBuffer, expectedBuffer)) throw new Error('Invalid DexFoundry webhook signature');\nif (typeof body.idempotencyKey !== 'string' || idempotencyHeader !== body.idempotencyKey) throw new Error('DexFoundry idempotency header/body mismatch');\nif (body.schemaVersion !== '1') throw new Error('Unsupported DexFoundry envelope schema');\nif (typeof body.occurredAt !== 'string' || Number.isNaN(Date.parse(body.occurredAt))) throw new Error('Invalid DexFoundry occurredAt');\nconst result = {\n  schemaVersion: '1',\n  idempotencyKey: body.idempotencyKey,\n  workflow: 'dexfoundry-n8n-proof',\n  status: 'SUCCEEDED',\n  completedAt: new Date(body.occurredAt).toISOString(),\n  outputs: { transport: 'n8n', proofVersion: '2.39.7', topic: body.topic, eventId: body.eventId }\n};\nconst rawBody = JSON.stringify(result);\nconst callbackTimestamp = String(Math.floor(Date.now() / 1000));\nconst callbackSignature = 'v1=' + crypto.createHmac('sha256', secret).update(callbackTimestamp + '.' + rawBody, 'utf8').digest('hex');\nreturn [{ json: { rawBody, callbackTimestamp, callbackSignature, idempotencyKey: body.idempotencyKey } }];"
+      },
+      "id": "dexfoundry-verify-and-sign",
+      "name": "Verify and Sign",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DEXFOUNDRY_CALLBACK_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-dexfoundry-timestamp", "value": "={{ $json.callbackTimestamp }}" },
+            { "name": "x-dexfoundry-signature", "value": "={{ $json.callbackSignature }}" },
+            { "name": "x-dexfoundry-idempotency-key", "value": "={{ $json.idempotencyKey }}" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.rawBody }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "dexfoundry-result-callback",
+      "name": "Return Signed Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 0]
+    }
+  ],
+  "connections": {
+    "DexFoundry Webhook": {
+      "main": [[{ "node": "Verify and Sign", "type": "main", "index": 0 }]]
+    },
+    "Verify and Sign": {
+      "main": [[{ "node": "Return Signed Result", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

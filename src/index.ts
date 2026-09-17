@@ -10,3 +10,4 @@ export * from "./orchestration/webhook.js";
 export * from "./orchestration/workflowResult.js";
 export * from "./orchestration/resultIngestor.js";
 export * from "./orchestration/dispatcher.js";
+export * from "./offers/contracts.js";

@@ -57,10 +57,7 @@ export class FoundryRepository {
       const company = await this.lockCompany(tx, input.companyId);
       assertTransition(company.state, input.to);
 
-      await tx.query(
-        "UPDATE companies SET state = $2, updated_at = now() WHERE id = $1",
-        [input.companyId, input.to]
-      );
+      await tx.query("UPDATE companies SET state = $2, updated_at = now() WHERE id = $1", [input.companyId, input.to]);
 
       const event = await tx.query<EventRow>(
         `INSERT INTO foundry_events
@@ -199,6 +196,12 @@ export class FoundryRepository {
         if (row.result_hash !== resultHash) {
           throw new WorkflowResultConflictError(`Conflicting result for ${result.idempotencyKey}/${result.workflow}`);
         }
+        await tx.query(
+          `UPDATE workflow_results
+           SET delivery_count = delivery_count + 1, last_received_at = now()
+           WHERE id = $1`,
+          [row.id]
+        );
         return { resultId: row.id, duplicate: true };
       }
 
