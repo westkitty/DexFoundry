@@ -99,6 +99,23 @@ function highSeverity(findings: readonly AccessibilityFinding[]): boolean {
   return [...countBy(errors, (finding) => finding.code).values()].some((count) => count >= 2);
 }
 
+export function representativeErrorFindings(
+  findings: readonly AccessibilityFinding[],
+  limit = 5
+): AccessibilityFinding[] {
+  const representatives: AccessibilityFinding[] = [];
+  const seenCodes = new Set<string>();
+  for (const finding of findings) {
+    if (finding.level !== "error") continue;
+    const code = finding.code.trim();
+    if (seenCodes.has(code)) continue;
+    seenCodes.add(code);
+    representatives.push(finding);
+    if (representatives.length >= limit) break;
+  }
+  return representatives;
+}
+
 export function accessibilityFindingSignature(finding: AccessibilityFinding): string {
   return [
     finding.level,
@@ -175,10 +192,8 @@ export class AccessibilityRegressionWatchAdapter implements OfferAdapter {
 
     for (const [pageIndex, result] of results.entries()) {
       evidence.push(summaryEvidence(pageIndex, result));
-      const strongest = result.findings
-        .filter((finding) => finding.level === "error")
-        .slice(0, 5);
-      strongest.forEach((finding, issueIndex) => evidence.push(issueEvidence(pageIndex, issueIndex, result, finding)));
+      const representatives = representativeErrorFindings(result.findings, 5);
+      representatives.forEach((finding, issueIndex) => evidence.push(issueEvidence(pageIndex, issueIndex, result, finding)));
     }
 
     return {
