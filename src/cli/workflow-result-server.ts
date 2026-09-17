@@ -1,4 +1,4 @@
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage } from "node:http";
 import { WorkflowResultIngestor } from "../orchestration/resultIngestor.js";
 import { FoundryRepository, WorkflowResultConflictError } from "../db/foundryRepository.js";
 import { PostgresClient } from "../db/postgres.js";
@@ -54,7 +54,7 @@ const shutdown = async () => {
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
-async function readBody(request: NodeJS.AsyncIterable<Buffer | string>, maxBytes: number): Promise<string> {
+async function readBody(request: IncomingMessage, maxBytes: number): Promise<string> {
   const chunks: Buffer[] = [];
   let total = 0;
   for await (const chunk of request) {
