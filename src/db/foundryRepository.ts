@@ -60,8 +60,8 @@ export class FoundryRepository {
 
       await tx.query(
         `INSERT INTO foundry_outbox (event_id, company_id, topic, idempotency_key, payload)
-         VALUES ($1, $2, 'foundry.company.state.changed', concat('event:', $1::text),
-           jsonb_build_object('eventId', $1::text, 'companyId', $2::text,
+         VALUES ($1::uuid, $2::uuid, 'foundry.company.state.changed', concat('event:', ($1::uuid)::text),
+           jsonb_build_object('eventId', ($1::uuid)::text, 'companyId', ($2::uuid)::text,
              'stateBefore', $3::text, 'stateAfter', $4::text, 'source', $5::text))`,
         [eventId, input.companyId, company.state, input.to, input.source]
       );
@@ -92,8 +92,8 @@ export class FoundryRepository {
 
       await tx.query(
         `INSERT INTO foundry_outbox (event_id, company_id, topic, idempotency_key, payload)
-         VALUES ($1, $2, 'foundry.opportunity.scored', concat('event:', $1::text),
-           jsonb_build_object('eventId', $1::text, 'companyId', $2::text,
+         VALUES ($1::uuid, $2::uuid, 'foundry.opportunity.scored', concat('event:', ($1::uuid)::text),
+           jsonb_build_object('eventId', ($1::uuid)::text, 'companyId', ($2::uuid)::text,
              'score', $3::int, 'source', $4::text))`,
         [eventId, companyId, score, source]
       );
