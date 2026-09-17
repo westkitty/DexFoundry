@@ -1,0 +1,16 @@
+{
+  "name": "DexFoundry Outbox Dispatch Contract",
+  "active": false,
+  "version": 1,
+  "notes": [
+    "Template only: import/adapt in n8n after endpoint credentials exist.",
+    "Input must match WorkflowEnvelope schemaVersion 1.",
+    "Check idempotencyKey before irreversible work.",
+    "Return WorkflowResult; never mutate canonical company state inside n8n.",
+    "Suppression and legal-state checks remain server-side gates."
+  ],
+  "topics": [
+    "foundry.company.state.changed",
+    "foundry.opportunity.scored"
+  ]
+}

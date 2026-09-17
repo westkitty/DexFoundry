@@ -20,11 +20,13 @@ The customer buys an outcome. DexFoundry operates the machinery behind it.
 
 - Deterministic acquisition/customer state machine.
 - Deterministic opportunity scoring.
-- Event-ledger contract.
-- Initial PostgreSQL schema.
-- Suppression data model.
+- Transactional PostgreSQL repository.
+- Ordered, idempotent SQL migrations with an advisory lock.
+- Durable event ledger and transactional outbox.
+- Suppression data model and lookup gate.
+- Versioned n8n workflow envelopes/results.
+- CI with PostgreSQL migration and persistence smoke proof.
 - Offer configuration scaffold.
-- Unit tests for protected transition/scoring behavior.
 
 ## Development
 
@@ -33,4 +35,13 @@ npm install
 npm run check
 ```
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`OPERATIONAL_STATE.md`](OPERATIONAL_STATE.md).
+Database validation:
+
+```bash
+export DATABASE_URL='postgresql://user:password@localhost:5432/dexfoundry'
+npm run build
+npm run db:migrate
+npm run db:smoke
+```
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/N8N_CONTRACT.md`](docs/N8N_CONTRACT.md), and [`OPERATIONAL_STATE.md`](OPERATIONAL_STATE.md).
