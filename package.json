@@ -1,0 +1,20 @@
+{
+  "name": "dexfoundry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Autonomous B2B service operations engine.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "check": "npm run build && npm test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}
