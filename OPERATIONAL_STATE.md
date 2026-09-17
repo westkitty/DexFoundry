@@ -3,8 +3,8 @@
 - **Project ID:** dexfoundry
 - **Project:** DexFoundry
 - **Repository:** westkitty/DexFoundry
-- **Revision:** 7
-- **State:** active-first-offer-buyer-proof
+- **Revision:** 8
+- **State:** active-first-offer-outreach-ready
 
 ## Purpose
 
@@ -92,12 +92,12 @@ GitHub repository existence and write access remain verified.
 
 ## Pending
 
-1. Prepare three manually reviewed buyer-facing POCs from Code and Theory, Instrument, and Work & Co; record review time and noise removed.
-2. Obtain at least one real target buyer/operator reaction and document whether the recurring regression value is understood.
-3. Attempt at least one explicitly priced manual pilot or sale and record objections, workload, and outcome.
-4. Re-run the manual-proof-to-automation gate. Only a passed gate may authorize Apollo enrichment or controlled discovery for this offer.
-5. Add deliverability, suppression, rate, and campaign approval controls before any real outbound email is enabled.
-6. Add customer reporting, health scoring, churn, and expansion loops only after initial service delivery is manually proven.
+1. Perform the required suppression check for the prepared Code and Theory outreach before sending.
+2. Send exactly one manual pilot ask only after suppression clearance.
+3. Record buyer response, objection, no-response, or pilot outcome.
+4. Measure actual human review time on a real service pass before estimating service margin.
+5. Re-run the manual-proof-to-automation gate. Only a passed gate may authorize Apollo enrichment or controlled discovery.
+6. Keep automated outbound blocked until deliverability, suppression, rate, and campaign-approval controls exist.
 
 ## Protected invariants
 
@@ -119,6 +119,9 @@ GitHub repository existence and write access remain verified.
 - Runtime proof on a controlled fixture does not count as target-market or commercial proof.
 
 ## Revision history
+
+### Revision 8 - 2026-09-17
+Prepared the first real buyer-proof packet. Three buyer-facing POCs were created and committed under `docs/buyer-proof/2026-09-17/` for Code and Theory, Instrument, and Work & Co. The packet records a test price of **$750 for a 30-day pilot** covering up to three public sites × three agreed pages, baseline plus weekly rescans, human triage, regression deltas, and a final report, with no remediation or compliance certification bundled. Public Copy Lint Gate passed the packet with 0 blocking findings and 0 warnings after one bounded cadence cleanup. A public Code and Theory new-business contact was verified and a Gmail draft was created with the Code and Theory POC attached. The draft has **not been sent** because the protected suppression check cannot be proven from the current runtime. Project state advances to **active-first-offer-outreach-ready**, not contacted.
 
 ### Revision 7 - 2026-09-17
 Completed the first representative target-site technical proof for Accessibility Regression Watch. Workflow run `35284702132` scanned five agency sites twice with 5/5 completion on both attempts, identical error counts, near-identical warning counts, and identical retained error signatures across repeats. Human evidence review exposed repeated contrast-rule noise, so prospect-facing evidence now prefers distinct rule classes. Scan summaries now retain compact fingerprints for the complete finding set and `compareAccessibilityEvidence()` provides NEW/PERSISTING/RESOLVED delta semantics. GitHub Actions run `35285145052` at commit `cf1950c8623d6c9a6abdf50fd5f09ecb5a3b3831` passed the full build, scanner, Postgres, and n8n proof suite. `docs/AUTOMATION_READINESS_001.md` records a BLOCKED verdict for sales/prospecting automation until buyer reaction and a manual paid-pilot/sale attempt exist. Project state advances to **active-first-offer-buyer-proof**, not automated acquisition.
