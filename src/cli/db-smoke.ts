@@ -32,6 +32,32 @@ try {
 
   await repository.recordOpportunityScore(company.id, 85, "ci-smoke");
 
+  const cleanOutbound = await repository.evaluateOutboundPermission({
+    email: "nobody@example.invalid",
+    domain: "example.invalid",
+    manualApproved: true
+  });
+  if (cleanOutbound.allowed || !cleanOutbound.blockers.includes("GLOBAL_DISABLED")) {
+    throw new Error(`Global outbound default-deny proof failed: ${JSON.stringify(cleanOutbound)}`);
+  }
+
+  await db.query(
+    "INSERT INTO suppressions (email, reason, source) VALUES ($1, $2, $3)",
+    ["blocked@example.invalid", "ci proof", "ci-smoke"]
+  );
+  const suppressedOutbound = await repository.evaluateOutboundPermission({
+    email: "blocked@example.invalid",
+    domain: "example.invalid",
+    manualApproved: true
+  });
+  if (
+    suppressedOutbound.allowed ||
+    !suppressedOutbound.blockers.includes("GLOBAL_DISABLED") ||
+    !suppressedOutbound.blockers.includes("SUPPRESSED")
+  ) {
+    throw new Error(`Suppression/outbound proof failed: ${JSON.stringify(suppressedOutbound)}`);
+  }
+
   const outbox = await db.query<{ idempotency_key: string }>(
     "SELECT idempotency_key FROM foundry_outbox WHERE event_id = $1",
     [transition.eventId]
@@ -86,7 +112,7 @@ try {
   }
 
   await db.query("DELETE FROM companies WHERE id = $1", [company.id]);
-  console.log("DexFoundry database smoke test passed, including duplicate-delivery accounting and conflict rejection.");
+  console.log("DexFoundry database smoke test passed, including outbound default-deny, suppression, duplicate-delivery accounting, and conflict rejection.");
 } finally {
   await db.close();
 }
