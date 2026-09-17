@@ -7,7 +7,7 @@ import type {
 } from "./contracts.js";
 
 export const ACCESSIBILITY_REGRESSION_WATCH_OFFER_ID = "accessibility-regression-watch";
-export const ACCESSIBILITY_REGRESSION_WATCH_VERSION = "0.1.0-manual-proof";
+export const ACCESSIBILITY_REGRESSION_WATCH_VERSION = "0.2.0-manual-proof";
 
 export type AccessibilityFindingLevel = "error" | "warning" | "notice";
 export type AccessibilityImpact = "critical" | "serious" | "moderate" | "minor" | "unknown";
@@ -99,9 +99,24 @@ function highSeverity(findings: readonly AccessibilityFinding[]): boolean {
   return [...countBy(errors, (finding) => finding.code).values()].some((count) => count >= 2);
 }
 
+export function accessibilityFindingSignature(finding: AccessibilityFinding): string {
+  return [
+    finding.level,
+    finding.code.trim(),
+    finding.selector?.trim() ?? ""
+  ].join("::");
+}
+
+function findingFingerprints(findings: readonly AccessibilityFinding[]): string[] {
+  return [...new Set(findings.map(accessibilityFindingSignature))].sort();
+}
+
 function summaryEvidence(index: number, result: AccessibilityScanResult): EvidenceRecord {
   const errors = result.findings.filter((finding) => finding.level === "error").length;
   const warnings = result.findings.filter((finding) => finding.level === "warning").length;
+  const fingerprints = findingFingerprints(result.findings);
+  const errorFingerprints = findingFingerprints(result.findings.filter((finding) => finding.level === "error"));
+  const warningFingerprints = findingFingerprints(result.findings.filter((finding) => finding.level === "warning"));
   return {
     id: `a11y-summary-${index + 1}`,
     fact: `Automated accessibility scan observed ${errors} error-level and ${warnings} warning-level findings on ${result.url}.`,
@@ -112,7 +127,13 @@ function summaryEvidence(index: number, result: AccessibilityScanResult): Eviden
       kind: "automated-accessibility-scan-summary",
       errors,
       warnings,
-      totalFindings: result.findings.length
+      totalFindings: result.findings.length,
+      fingerprints,
+      errorFingerprints,
+      warningFingerprints,
+      uniqueFindingSignatures: fingerprints.length,
+      uniqueErrorSignatures: errorFingerprints.length,
+      uniqueWarningSignatures: warningFingerprints.length
     }
   };
 }
