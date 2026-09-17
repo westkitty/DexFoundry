@@ -3,8 +3,8 @@
 - **Project ID:** dexfoundry
 - **Project:** DexFoundry
 - **Repository:** westkitty/DexFoundry
-- **Revision:** 4
-- **State:** active-live-orchestration-proof
+- **Revision:** 5
+- **State:** active-first-offer-manual-proof
 
 ## Purpose
 
@@ -30,48 +30,57 @@ Implemented in source:
 - `assertGroundedPoc` rejects POC claims without evidence and references to unknown evidence IDs.
 - Suppression is a first-class concept with case-insensitive lookup support.
 - Initial human gates protect new campaigns, unusual contracts, and destructive/security-sensitive customer operations.
+- First offer hypothesis: **Accessibility Regression Watch** for agencies and other operators maintaining public website portfolios.
+- `AccessibilityRegressionWatchAdapter` converts normalized automated accessibility findings into evidence, deterministic opportunity signals, and an evidence-grounded POC.
+- The offer is explicitly scanner-agnostic through `AccessibilityScanProvider`; no live Pa11y/axe scanner integration has yet been promoted.
+- The offer POC explicitly states that automated findings are not a WCAG conformance determination, legal opinion, or substitute for knowledgeable human accessibility evaluation.
+- The offer remains marked `manual-proof-required`; no prospect outreach, compliance claims, or autonomous sale path is enabled.
 
 ## Verified
 
-At commit `6cd74c639ef96dff043c41425dff634fd95bac29`, GitHub Actions run `35277855045` passed the complete current validation path:
+At commit `3447ddb3227429a0d11ba0c7f11e9e5313493d54`, GitHub Actions run `35282883024` passed the complete existing validation path after adding and exporting the Accessibility Regression Watch adapter and its tests:
 
 - Node 24 dependency installation and TypeScript compilation
-- **21/21 unit tests across 8 test files** covering state, scoring, migrations, dispatcher behavior, HMAC signing/replay protection, signed result ingestion, workflow-result hashing, and offer evidence grounding
+- complete unit-test suite, including accessibility-offer target normalization, observed-problem detection, evidence grounding, and clean-scan behavior
 - PostgreSQL migrations `001_foundation.sql`, `002_workflow_results.sql`, and `003_workflow_delivery_receipts.sql`
 - repeated migration with no reapplication
 - live PostgreSQL smoke proof of state, score, event, outbox, result persistence, duplicate-delivery accounting, and conflicting-result rejection
-- official pinned `docker.n8n.io/n8nio/n8n:2.39.7` image pulled in disposable GitHub CI
-- fresh n8n instance initialized, proof workflow imported, and workflow published
-- production webhook registration verified before dispatch
-- real signed DexFoundry outbox event delivered over HTTP to the running n8n workflow
-- n8n verified the inbound HMAC/replay/idempotency contract and returned a signed callback to the live DexFoundry result receiver
-- first delivery reached `PUBLISHED` with no release
-- the same event was deliberately requeued and delivered a second time
-- second delivery also reached `PUBLISHED`
-- final proof confirmed one durable workflow result, `delivery_count = 2`, and two outbox delivery attempts
-- disposable n8n container and volume were cleaned up after proof
+- pinned n8n 2.39.7 disposable integration instance
+- production webhook registration gate
+- real signed DexFoundry dispatch to n8n
+- signed n8n callback into DexFoundry
+- deliberate duplicate redelivery proof preserving one durable result
+- clean orchestration proof-process teardown
 
-The live-proof path exposed and repaired several integration defects before promotion: GitHub Actions env scalar validation, n8n 2.39.7 requiring Node 24, insufficient first-delivery error visibility, and readiness checking `/healthz` before the production webhook route was registered. The final CI path gates on the actual production webhook route.
+Revision 4's end-to-end orchestration proof therefore remains intact after the first offer adapter was introduced.
+
+Research-backed product boundary recorded in `docs/OFFER_ACCESSIBILITY_REGRESSION_WATCH.md`: the product is machine-detectable accessibility **regression monitoring**, not an automated claim of accessibility compliance.
 
 GitHub repository existence and write access remain verified.
 
 ## Implemented but unverified
 
+- A concrete Pa11y/axe scanner implementation behind `AccessibilityScanProvider`.
+- Real scans against representative target-ICP websites.
+- Stability/repeatability of findings across real sites and repeated runs.
+- Human usefulness of generated accessibility-regression POCs.
+- Willingness to pay, pricing, close rate, or commercial demand for this offer.
 - Long-running/production n8n deployment and process supervision outside disposable CI.
 - Production secret rotation and deployment-specific secret storage.
 - Apollo enrichment integration.
 - Any real outbound email path.
-- Any concrete customer service/delivery adapter.
-- A real business offer using the generic `OfferAdapter` contract.
+- Customer delivery/reporting implementation for Accessibility Regression Watch.
 - Local MacBook checkout parity with the GitHub repository; GitHub/CI remains the verified source baseline for this revision.
 
 ## Pending
 
-1. Define and implement the first real service offer: ICP, observable pain signals, evidence collector, POC format, delivery adapter, and unit economics.
-2. Add Apollo enrichment after credentials/configuration are available.
-3. Add deliverability, suppression, rate, and campaign approval controls before any real outbound email is enabled.
-4. Add production deployment/process supervision for DexFoundry and n8n only when an actual service environment is selected.
-5. Add service reporting, health scoring, churn, and expansion loops after the initial offer is manually proven.
+1. Implement one bounded live scanner provider, initially Pa11y and/or axe-core, without coupling the offer contract to scanner-specific output.
+2. Manually run the offer on at least five representative public sites from the target ICP and record false positives, instability, blocked scans, and human-judgment gaps.
+3. Produce at least three real evidence-backed POCs manually.
+4. Obtain at least one target buyer/operator reaction and attempt a manual sale before automating prospecting/outreach.
+5. Only after manual proof: add Apollo enrichment and controlled discovery for this offer.
+6. Add deliverability, suppression, rate, and campaign approval controls before any real outbound email is enabled.
+7. Add customer reporting, health scoring, churn, and expansion loops after initial service delivery is manually proven.
 
 ## Protected invariants
 
@@ -87,8 +96,14 @@ GitHub repository existence and write access remain verified.
 - A conflicting duplicate result must be rejected and investigated rather than silently overwriting prior evidence.
 - An offer POC may not contain an evidence-bearing claim whose evidence IDs are empty or unresolved.
 - CI-only Docker use for disposable integration proof does not establish Docker as a local development or production requirement.
+- Automated accessibility findings may not be represented as proof of WCAG conformance or legal compliance.
+- A clean automated accessibility scan may not be represented as proof that a page is accessible.
+- Accessibility Regression Watch may not begin automated prospect outreach while its commercial proof state is `manual-proof-required`.
 
 ## Revision history
+
+### Revision 5 - 2026-09-17
+Selected Accessibility Regression Watch as the first bounded offer hypothesis after comparative research. Added a scanner-agnostic accessibility adapter, normalized evidence model, deterministic pain signals, evidence-grounded automated-only POC, tests, package export, and a manual-proof gate document. GitHub Actions run `35282883024` passed the complete existing orchestration/database proof after the adapter was added. This verifies the software contract, not commercial demand or real-world scan quality. The offer remains explicitly `manual-proof-required`.
 
 ### Revision 4 - 2026-09-17
 Added migration 003 for duplicate-delivery receipts, the generic evidence-grounded `OfferAdapter` contract, and an importable signed n8n proof workflow. Reworked CI to Node 24 and a pinned official n8n 2.39.7 container after the earlier CLI path exposed runtime/bootstrap noise. GitHub Actions run `35277855045` then proved the real production-webhook path end to end: signed DexFoundry dispatch -> n8n verification -> signed callback -> durable result, followed by deliberate duplicate redelivery yielding one result with `delivery_count = 2`. Local development remains Docker-free.
