@@ -32,16 +32,16 @@ jobs:
       DEXFOUNDRY_WEBHOOK_SECRET: ci-dexfoundry-proof-secret-0123456789abcdef
       DEXFOUNDRY_CALLBACK_URL: http://127.0.0.1:8787/workflow-results
       DEXFOUNDRY_RESULT_HOST: 127.0.0.1
-      DEXFOUNDRY_RESULT_PORT: 8787
+      DEXFOUNDRY_RESULT_PORT: "8787"
       N8N_WEBHOOK_URL: http://127.0.0.1:5678/webhook/dexfoundry-proof
-      N8N_USER_FOLDER: ${{ runner.temp }}/dexfoundry-n8n
+      N8N_USER_FOLDER: /tmp/dexfoundry-n8n
       N8N_HOST: 127.0.0.1
-      N8N_PORT: 5678
+      N8N_PORT: "5678"
       N8N_PROTOCOL: http
-      N8N_SECURE_COOKIE: false
-      N8N_DIAGNOSTICS_ENABLED: false
-      N8N_PERSONALIZATION_ENABLED: false
-      N8N_BLOCK_ENV_ACCESS_IN_NODE: false
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
       NODE_FUNCTION_ALLOW_BUILTIN: crypto
     steps:
       - uses: actions/checkout@v7
@@ -60,6 +60,7 @@ jobs:
         run: npm run db:smoke
       - name: Import and publish pinned n8n proof workflow
         run: |
+          rm -rf "$N8N_USER_FOLDER"
           mkdir -p "$N8N_USER_FOLDER"
           npx --yes n8n@2.39.7 user-management:reset
           npx --yes n8n@2.39.7 import:workflow --input=workflows/n8n/signed-proof-loop.json
