@@ -3,8 +3,8 @@
 - **Project ID:** dexfoundry
 - **Project:** DexFoundry
 - **Repository:** westkitty/DexFoundry
-- **Revision:** 8
-- **State:** active-first-offer-outreach-ready
+- **Revision:** 9
+- **State:** active-first-offer-outbound-locked
 
 ## Purpose
 
@@ -39,6 +39,10 @@ Implemented in source:
 - Scan summaries retain compact fingerprints for the complete finding set while prospect-facing evidence is limited to representative rule classes.
 - `compareAccessibilityEvidence()` classifies matching-page signatures as NEW, PERSISTING, or RESOLVED without treating raw issue-count churn as a regression by itself.
 - `docs/AUTOMATION_READINESS_001.md` records the current automation verdict: scanner/baseline/delta/manual-POC work may continue, while prospecting, Apollo, outreach, proposal/payment, and customer-delivery automation remain blocked pending buyer proof.
+- Migration `004_outbound_controls.sql` creates a canonical global outbound control with default mode `DISABLED`.
+- `evaluateOutboundPolicy()` and `FoundryRepository.evaluateOutboundPermission()` combine global mode, suppression, and manual approval into one deterministic decision.
+- `npm run outbound:check -- [email] [domain]` is a read-only permission probe that exits blocked when delivery is not allowed.
+- Current active rule: **no external prospect or customer messages may be sent**. Prepared drafts and POCs may remain internal, but no externally visible delivery action is authorized.
 
 ## Verified
 
@@ -92,18 +96,21 @@ GitHub repository existence and write access remain verified.
 
 ## Pending
 
-1. Perform the required suppression check for the prepared Code and Theory outreach before sending.
-2. Send exactly one manual pilot ask only after suppression clearance.
-3. Record buyer response, objection, no-response, or pilot outcome.
-4. Measure actual human review time on a real service pass before estimating service margin.
-5. Re-run the manual-proof-to-automation gate. Only a passed gate may authorize Apollo enrichment or controlled discovery.
-6. Keep automated outbound blocked until deliverability, suppression, rate, and campaign-approval controls exist.
+1. Keep all external prospect/customer messaging disabled unless the user later explicitly changes this rule.
+2. Continue only non-messaging work: scanner quality, regression reporting, delivery design, pricing analysis, simulation, fixtures, and internal buyer-proof refinement.
+3. Measure actual human review time on a controlled/internal service pass before estimating service margin.
+4. Add deliverability, suppression, rate, campaign-approval, audit, and sender-edge controls before any future outbound enablement is considered.
+5. Re-run the manual-proof-to-automation gate only after buyer-proof strategy changes or outbound is explicitly reconsidered.
+6. Local MacBook checkout parity with GitHub main remains unverified.
 
 ## Protected invariants
 
 - No direct `DISCOVERED -> WON` state jump.
 - `DO_NOT_CONTACT` is terminal.
 - Suppression must be checked before outbound sends.
+- Global outbound mode is canonical in Postgres and defaults to `DISABLED`.
+- While the active user rule says no messages should be sent to anyone else, no external prospect/customer message may be delivered, regardless of a prepared draft or target readiness.
+- Failure to read outbound mode or suppression state must fail closed, never permissively.
 - POC claims must be sourced or directly measured.
 - Workflow/AI components and offer adapters may propose work but canonical state belongs in the control database.
 - Durable business mutations and their dispatch intent must be committed atomically through Postgres plus the outbox.
@@ -119,6 +126,9 @@ GitHub repository existence and write access remain verified.
 - Runtime proof on a controlled fixture does not count as target-market or commercial proof.
 
 ## Revision history
+
+### Revision 9 - 2026-09-17
+Converted the current no-message instruction into a default-deny control-plane rule instead of relying on conversation memory. Added migration `004_outbound_controls.sql` with global mode `DISABLED`, the deterministic outbound policy model, repository-level suppression-aware permission evaluation, a read-only `outbound:check` CLI, unit coverage for DISABLED/MANUAL_ONLY/ENABLED behavior, and live PostgreSQL smoke assertions proving both global default-deny and suppression blocking. Build/tests, migration 004, idempotent migration, accessibility fixture proof, and the live Postgres smoke passed in GitHub Actions run `35288828797` before the unchanged n8n regression portion. `docs/OUTBOUND_POLICY.md` records the rule. No external message was sent. The existing Gmail draft remains unsent and is not authorization to deliver. Project state advances to **active-first-offer-outbound-locked**.
 
 ### Revision 8 - 2026-09-17
 Prepared the first real buyer-proof packet. Three buyer-facing POCs were created and committed under `docs/buyer-proof/2026-09-17/` for Code and Theory, Instrument, and Work & Co. The packet records a test price of **$750 for a 30-day pilot** covering up to three public sites × three agreed pages, baseline plus weekly rescans, human triage, regression deltas, and a final report, with no remediation or compliance certification bundled. Public Copy Lint Gate passed the packet with 0 blocking findings and 0 warnings after one bounded cadence cleanup. A public Code and Theory new-business contact was verified and a Gmail draft was created with the Code and Theory POC attached. The draft has **not been sent** because the protected suppression check cannot be proven from the current runtime. Project state advances to **active-first-offer-outreach-ready**, not contacted.
