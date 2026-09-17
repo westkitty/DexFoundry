@@ -12,4 +12,4 @@ export * from "./orchestration/resultIngestor.js";
 export * from "./orchestration/dispatcher.js";
 export * from "./offers/contracts.js";
 export * from "./offers/accessibilityRegressionWatch.js";
-export * from "./offers/pa11yCliScanner.js";
+export * from "./offers/pa11yScanner.js";
