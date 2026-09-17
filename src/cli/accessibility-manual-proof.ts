@@ -1,6 +1,6 @@
 import { AccessibilityRegressionWatchAdapter } from "../offers/accessibilityRegressionWatch.js";
 import { assertGroundedPoc, type CompanySnapshot } from "../offers/contracts.js";
-import { Pa11yCliScanner } from "../offers/pa11yCliScanner.js";
+import { Pa11yAccessibilityScanner } from "../offers/pa11yScanner.js";
 
 function usage(): never {
   throw new Error(
@@ -49,7 +49,9 @@ async function main(): Promise<void> {
     }
   };
 
-  const adapter = new AccessibilityRegressionWatchAdapter(new Pa11yCliScanner());
+  const adapter = new AccessibilityRegressionWatchAdapter(
+    new Pa11yAccessibilityScanner({ runners: ["axe", "htmlcs"], includeWarnings: true, includeNotices: false })
+  );
   const detection = await adapter.detectPain(company);
   const poc = await adapter.buildPoc({ company, detection });
   assertGroundedPoc(poc, detection.evidence);
