@@ -1,0 +1,20 @@
+{
+  "id": "example-offer",
+  "status": "DRAFT",
+  "outcome": "Replace this with one measurable customer outcome.",
+  "icp": {
+    "industries": [],
+    "employeeMin": null,
+    "employeeMax": null
+  },
+  "signals": [],
+  "poc": {
+    "type": "mini-audit",
+    "claimPolicy": "Only sourced or directly measured claims may be published."
+  },
+  "humanApproval": {
+    "newCampaign": true,
+    "customContract": true,
+    "destructiveCustomerOperation": true
+  }
+}
