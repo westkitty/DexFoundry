@@ -1,6 +1,6 @@
 {
   "name": "dexfoundry",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Autonomous B2B service operations engine.",
@@ -17,9 +17,10 @@
     "n8n:proof:assert": "node dist/src/cli/n8n-proof-assert.js"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13.0"
   },
   "dependencies": {
+    "pa11y": "10.0.0",
     "pg": "^8.23.0"
   },
   "devDependencies": {
