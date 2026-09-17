@@ -1,4 +1,4 @@
-import { Pool, type PoolClient, type QueryResultRow } from "pg";
+import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from "pg";
 import type { SqlClient, SqlExecutor, SqlResult } from "./sql.js";
 
 function executorFor(client: Pool | PoolClient): SqlExecutor {
@@ -7,8 +7,11 @@ function executorFor(client: Pool | PoolClient): SqlExecutor {
       text: string,
       params: readonly unknown[] = []
     ): Promise<SqlResult<Row>> {
-      const result = await client.query<Row & QueryResultRow>(text, [...params]);
-      return { rows: result.rows, rowCount: result.rowCount ?? result.rows.length };
+      const raw = await client.query<Row & QueryResultRow>(text, [...params]);
+      const results = (Array.isArray(raw) ? raw : [raw]) as QueryResult<Row & QueryResultRow>[];
+      const rows = results.flatMap((result) => result.rows ?? []) as Row[];
+      const rowCount = results.reduce((total, result) => total + (result.rowCount ?? 0), 0);
+      return { rows, rowCount };
     }
   };
 }
