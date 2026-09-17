@@ -3,8 +3,8 @@
 - **Project ID:** dexfoundry
 - **Project:** DexFoundry
 - **Repository:** westkitty/DexFoundry
-- **Revision:** 6
-- **State:** active-first-offer-manual-proof
+- **Revision:** 7
+- **State:** active-first-offer-buyer-proof
 
 ## Purpose
 
@@ -36,6 +36,9 @@ Implemented in source:
 - `npm run a11y:manual-proof -- --name "Company" <url> [url ...]` runs the bounded manual-proof path for at most three explicit public HTTP(S) URLs.
 - The offer POC explicitly states that automated findings are not a WCAG conformance determination, legal opinion, or substitute for knowledgeable human accessibility evaluation.
 - The offer remains marked `manual-proof-required`; no prospect outreach, compliance claims, or autonomous sale path is enabled.
+- Scan summaries retain compact fingerprints for the complete finding set while prospect-facing evidence is limited to representative rule classes.
+- `compareAccessibilityEvidence()` classifies matching-page signatures as NEW, PERSISTING, or RESOLVED without treating raw issue-count churn as a regression by itself.
+- `docs/AUTOMATION_READINESS_001.md` records the current automation verdict: scanner/baseline/delta/manual-POC work may continue, while prospecting, Apollo, outreach, proposal/payment, and customer-delivery automation remain blocked pending buyer proof.
 
 ## Verified
 
@@ -62,13 +65,23 @@ A stale-tree consolidation attempt briefly removed the wrong Pa11y implementatio
 
 Research-backed product boundary recorded in `docs/OFFER_ACCESSIBILITY_REGRESSION_WATCH.md`: the product is machine-detectable accessibility **regression monitoring**, not an automated claim of accessibility compliance.
 
+Representative target-site proof is now verified:
+- GitHub Actions workflow run `35284702132` attempt 1 scanned five representative agency home pages with **5/5 completion and 0 blocks**.
+- Attempt 2 repeated the same five scans with **5/5 completion and 0 blocks**.
+- Error counts were identical across all five candidates between runs.
+- Warning counts were identical on four candidates; Huge changed from 41 to 42.
+- The five retained error signatures on every candidate were identical between attempts when compared as rule code + selector.
+- Internal evidence review found repeated contrast findings can dominate raw counts, so buyer-facing evidence was changed to prefer distinct rule classes.
+- Code and Theory, Instrument, and Work & Co were identified as the strongest first POC candidates; R/GA and Huge are currently weaker because repeated contrast findings dominate the sampled evidence.
+
+At commit `cf1950c8623d6c9a6abdf50fd5f09ecb5a3b3831`, GitHub Actions run `35285145052` passed the complete validation path after adding complete compact fingerprints, the regression-delta comparator, and representative-rule POC selection. Build/tests, browser-backed scanner proof, all Postgres proofs, and the signed n8n duplicate-delivery loop remained green.
+
 GitHub repository existence and write access remain verified.
 
 ## Implemented but unverified
 
-- Real scans against representative target-ICP websites.
-- Stability/repeatability of findings across real public sites and repeated runs.
-- Human usefulness of generated accessibility-regression POCs.
+- Long-interval stability/repeatability across real public sites and actual site changes.
+- Target-buyer usefulness of generated accessibility-regression POCs.
 - Willingness to pay, pricing, close rate, or commercial demand for this offer.
 - Long-running/production n8n deployment and process supervision outside disposable CI.
 - Production secret rotation and deployment-specific secret storage.
@@ -79,12 +92,12 @@ GitHub repository existence and write access remain verified.
 
 ## Pending
 
-1. Manually run the offer on at least five representative public sites from the target ICP and record false positives, instability, blocked scans, and human-judgment gaps.
-2. Produce at least three real evidence-backed POCs manually.
-3. Obtain at least one target buyer/operator reaction and attempt a manual sale before automating prospecting/outreach.
-4. Only after manual proof: add Apollo enrichment and controlled discovery for this offer.
+1. Prepare three manually reviewed buyer-facing POCs from Code and Theory, Instrument, and Work & Co; record review time and noise removed.
+2. Obtain at least one real target buyer/operator reaction and document whether the recurring regression value is understood.
+3. Attempt at least one explicitly priced manual pilot or sale and record objections, workload, and outcome.
+4. Re-run the manual-proof-to-automation gate. Only a passed gate may authorize Apollo enrichment or controlled discovery for this offer.
 5. Add deliverability, suppression, rate, and campaign approval controls before any real outbound email is enabled.
-6. Add customer reporting, health scoring, churn, and expansion loops after initial service delivery is manually proven.
+6. Add customer reporting, health scoring, churn, and expansion loops only after initial service delivery is manually proven.
 
 ## Protected invariants
 
@@ -106,6 +119,9 @@ GitHub repository existence and write access remain verified.
 - Runtime proof on a controlled fixture does not count as target-market or commercial proof.
 
 ## Revision history
+
+### Revision 7 - 2026-09-17
+Completed the first representative target-site technical proof for Accessibility Regression Watch. Workflow run `35284702132` scanned five agency sites twice with 5/5 completion on both attempts, identical error counts, near-identical warning counts, and identical retained error signatures across repeats. Human evidence review exposed repeated contrast-rule noise, so prospect-facing evidence now prefers distinct rule classes. Scan summaries now retain compact fingerprints for the complete finding set and `compareAccessibilityEvidence()` provides NEW/PERSISTING/RESOLVED delta semantics. GitHub Actions run `35285145052` at commit `cf1950c8623d6c9a6abdf50fd5f09ecb5a3b3831` passed the full build, scanner, Postgres, and n8n proof suite. `docs/AUTOMATION_READINESS_001.md` records a BLOCKED verdict for sales/prospecting automation until buyer reaction and a manual paid-pilot/sale attempt exist. Project state advances to **active-first-offer-buyer-proof**, not automated acquisition.
 
 ### Revision 6 - 2026-09-17
 Pinned Pa11y 10.0.0, wired the concrete `Pa11yAccessibilityScanner`, exposed the bounded manual-proof command, and added a real browser-backed local-fixture proof to CI. A stale-tree cleanup briefly removed the wrong provider path; CI caught the broken imports, repository authority was re-resolved from the current commit chain, and the canonical direct provider was restored. GitHub Actions run `35284098870` at commit `f901a0df95c4b378f993d13ab5bcf278f7ed5b43` passed build/tests, real Pa11y fixture execution, all Postgres proofs, and the full signed n8n duplicate-delivery loop. The scanner runtime is now proven; the offer remains commercially unproven and manually gated.
