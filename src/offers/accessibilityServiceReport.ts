@@ -1,4 +1,8 @@
 import { compareAccessibilityEvidence, type AccessibilityRegressionDelta } from "./accessibilityRegressionDelta.js";
+import {
+  parseCompletedAccessibilityReviewSession,
+  type AccessibilityReviewSession
+} from "./accessibilityReviewSession.js";
 import type { EvidenceRecord } from "./contracts.js";
 
 export type ReviewMinutesSource = "operator-measured" | "fixture";
@@ -29,6 +33,21 @@ export interface AccessibilityServiceEconomics {
   modeledContributionMarginBps: number;
 }
 
+export interface AccessibilityServiceReviewEvidence {
+  sessionId: string;
+  startedAt: string;
+  endedAt: string;
+  elapsedMinutes: number;
+  pausedMinutes: number;
+  activeReviewMinutes: number;
+  pagesReviewed: number;
+  noiseRemoved: number;
+  judgmentEscalations: number;
+  reportEditMinutes: number;
+  failedOrBlockedScans: number;
+  directToolCostCents: number;
+}
+
 export interface AccessibilityServiceReport {
   reportVersion: "1";
   simulation: true;
@@ -45,6 +64,7 @@ export interface AccessibilityServiceReport {
     representativeResolved: string[];
   };
   economics: AccessibilityServiceEconomics;
+  reviewSession?: AccessibilityServiceReviewEvidence;
   caveats: string[];
 }
 
@@ -133,7 +153,50 @@ export function buildAccessibilityServiceReport(
       "This report is an internal service simulation and is not authorized for external delivery.",
       "Automated accessibility findings do not establish WCAG conformance or legal compliance.",
       "Modeled contribution is not realized profit, gross margin, buyer demand, or commercial proof.",
-      "Review time is only treated as measured when the caller explicitly marks it operator-measured."
+      "Review time is only treated as measured when it comes from a completed operator review session."
     ]
+  };
+}
+
+export function buildAccessibilityServiceReportFromReviewSession(
+  previous: readonly EvidenceRecord[],
+  current: readonly EvidenceRecord[],
+  reviewSession: AccessibilityReviewSession,
+  input: {
+    laborCostPerHourCents: number;
+    pilotPriceCents: number;
+  },
+  generatedAt = new Date().toISOString()
+): AccessibilityServiceReport {
+  const verifiedSession = parseCompletedAccessibilityReviewSession(reviewSession);
+  const report = buildAccessibilityServiceReport(
+    previous,
+    current,
+    {
+      reviewMinutes: verifiedSession.activeReviewMinutes,
+      reviewMinutesSource: "operator-measured",
+      laborCostPerHourCents: input.laborCostPerHourCents,
+      toolCostCents: verifiedSession.directToolCostCents,
+      pilotPriceCents: input.pilotPriceCents
+    },
+    generatedAt
+  );
+
+  return {
+    ...report,
+    reviewSession: {
+      sessionId: verifiedSession.sessionId,
+      startedAt: verifiedSession.startedAt,
+      endedAt: verifiedSession.endedAt,
+      elapsedMinutes: verifiedSession.elapsedMinutes,
+      pausedMinutes: verifiedSession.pausedMinutes,
+      activeReviewMinutes: verifiedSession.activeReviewMinutes,
+      pagesReviewed: verifiedSession.pagesReviewed,
+      noiseRemoved: verifiedSession.noiseRemoved,
+      judgmentEscalations: verifiedSession.judgmentEscalations,
+      reportEditMinutes: verifiedSession.reportEditMinutes,
+      failedOrBlockedScans: verifiedSession.failedOrBlockedScans,
+      directToolCostCents: verifiedSession.directToolCostCents
+    }
   };
 }

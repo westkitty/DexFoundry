@@ -4,85 +4,66 @@
 
 This workflow exercises the delivery/reporting side of Accessibility Regression Watch without contacting a prospect or customer.
 
-It turns two stored accessibility evidence sets into:
-
-- NEW / PERSISTING / RESOLVED regression counts;
-- a bounded internal change classification;
-- explicit human-review workload input;
-- an input-based direct-cost and contribution model.
+It turns two stored accessibility evidence sets into NEW / PERSISTING / RESOLVED regression counts, an internal change classification, measured-or-fixture review workload evidence, and an input-based direct-cost/contribution model.
 
 It does **not** send a message, publish a report, create a contact, alter suppression state, or change outbound mode.
 
-## Why review time is explicit
+## Operator measurement contract
 
-DexFoundry must not manufacture service-margin evidence from AI-assisted work.
+DexFoundry must not manufacture service-margin evidence from AI-assisted work or hand-entered guesses.
 
-The simulator therefore requires review minutes as an explicit input and requires the caller to label those minutes as either:
+A real measured pass starts an operator review session before review begins and finishes it after the review/report pass ends. The completed record captures wall-clock start/end, paused minutes, derived active review minutes, pages reviewed, scanner noise removed, judgment escalations, report-edit minutes, failed/blocked scans, direct tool cost, and optional notes.
 
-- `fixture` — synthetic/test timing; or
-- `operator-measured` — timing actually measured during a human review pass.
+Derived elapsed/active minutes are recomputed when the record is loaded. Tampered or impossible timing is rejected.
 
-Even with operator-measured review time, the output remains modeled economics. It is not realized profit, buyer demand, conversion evidence, or proof that the $750 pilot price will sell.
+## Start a measured internal review
 
-## Input
+```sh
+npm run a11y:review-session -- start --output review-session.json
+```
 
-Use two JSON files containing either:
+This creates an `IN_PROGRESS` record without overwriting an existing file.
 
-- the `evidence` array from a manual proof; or
-- a full `a11y:manual-proof` JSON result containing an `evidence` field.
+## Finish the measured internal review
 
-The two evidence sets must include at least one matching sampled page.
+```sh
+npm run a11y:review-session -- finish \
+  --session review-session.json \
+  --pages-reviewed 3 \
+  --noise-removed 4 \
+  --judgment-escalations 2 \
+  --report-edit-minutes 10 \
+  --failed-or-blocked-scans 0 \
+  --paused-minutes 5 \
+  --direct-tool-cost 0 \
+  --note "Internal review only"
+```
 
-## Run
+The session is then `COMPLETE` and can be used as measured workload evidence.
 
-After build:
+## Build a report from a completed review session
 
 ```sh
 npm run a11y:simulate-service -- \
   --baseline baseline.json \
   --current current.json \
-  --review-minutes 30 \
-  --review-source fixture \
+  --review-session review-session.json \
   --labor-hourly 80 \
-  --tool-cost 10 \
   --pilot-price 750
 ```
 
-For a real internal timing pass, replace `fixture` with `operator-measured` only when the minutes were actually measured.
+When `--review-session` is used, DexFoundry takes active review minutes and direct tool cost from the completed session. It rejects attempts to combine that session with hand-entered `--review-minutes`, `--review-source`, or `--tool-cost`.
+
+## Fixture-only simulation
+
+Hand-entered review minutes remain allowed only with `--review-source fixture`. Operator-measured economics require a completed review-session record.
 
 ## Output locks
 
-Every generated report is intentionally marked:
+Every generated report remains `simulation: true`, `externalDeliveryAllowed: false`, `requiresHumanReview: true`, and `conformanceDetermination: false`.
 
-- `simulation: true`
-- `externalDeliveryAllowed: false`
-- `requiresHumanReview: true`
-- `conformanceDetermination: false`
-
-The report may be used to refine internal delivery mechanics and cost assumptions. It is not authorized for prospect/customer delivery and cannot override the global outbound control.
-
-## Economic interpretation
-
-The simulator calculates:
-
-- modeled labor cost from supplied review minutes × supplied hourly labor cost;
-- supplied tool cost;
-- modeled total direct cost;
-- modeled contribution against the supplied pilot price;
-- modeled contribution margin in basis points.
-
-This is deliberately narrower than accounting profit or gross margin. It excludes acquisition cost, overhead, taxes, failed scans, support burden, remediation labor, customer-specific complexity, and unpaid sales time unless the operator explicitly incorporates those costs into the inputs.
+A completed operator session upgrades only the **review-time evidence**. It does not validate buyer demand, pricing, close rate, realized profit, or commercial viability.
 
 ## Next evidence target
 
-Run one complete internal service pass with measured human review time. Record:
-
-1. total pages reviewed;
-2. total review minutes;
-3. scanner noise removed;
-4. findings escalated for judgment;
-5. final report-edit time;
-6. any failed or blocked scan work;
-7. explicit direct tool cost.
-
-Only then should DexFoundry use `operator-measured` timing to model service economics.
+Run one genuine complete internal service pass using the start/finish session workflow. The resulting measured session can then be fed to the simulator without converting guesses into evidence.

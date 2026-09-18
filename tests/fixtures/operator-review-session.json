@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1",
+  "sessionType": "accessibility-regression-review",
+  "sessionId": "fixture-operator-review",
+  "measurementState": "COMPLETE",
+  "startedAt": "2026-09-17T12:00:00.000Z",
+  "endedAt": "2026-09-17T12:45:00.000Z",
+  "elapsedMinutes": 45,
+  "pausedMinutes": 5,
+  "activeReviewMinutes": 40,
+  "pagesReviewed": 3,
+  "noiseRemoved": 4,
+  "judgmentEscalations": 2,
+  "reportEditMinutes": 10,
+  "failedOrBlockedScans": 1,
+  "directToolCostCents": 250,
+  "notes": ["Fixture only; not a real operator timing record."]
+}

@@ -14,6 +14,7 @@ export * from "./offers/contracts.js";
 export * from "./offers/accessibilityRegressionWatch.js";
 export * from "./offers/pa11yScanner.js";
 export * from "./offers/accessibilityRegressionDelta.js";
+export * from "./offers/accessibilityReviewSession.js";
 export * from "./offers/accessibilityServiceReport.js";
 export * from "./outbound/policy.js";
 export * from "./outbound/guardedSend.js";

@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
+import { parseCompletedAccessibilityReviewSession } from "../offers/accessibilityReviewSession.js";
 import {
   buildAccessibilityServiceReport,
+  buildAccessibilityServiceReportFromReviewSession,
   type ReviewMinutesSource
 } from "../offers/accessibilityServiceReport.js";
 import type { EvidenceRecord } from "../offers/contracts.js";
@@ -8,16 +10,21 @@ import type { EvidenceRecord } from "../offers/contracts.js";
 interface ParsedArgs {
   baseline: string;
   current: string;
-  reviewMinutes: number;
-  reviewMinutesSource: ReviewMinutesSource;
+  reviewSession?: string;
+  reviewMinutes?: number;
+  reviewMinutesSource?: ReviewMinutesSource;
   laborCostPerHourCents: number;
-  toolCostCents: number;
+  toolCostCents?: number;
   pilotPriceCents: number;
 }
 
 function usage(): never {
   throw new Error(
-    "Usage: npm run a11y:simulate-service -- --baseline baseline.json --current current.json --review-minutes 30 --review-source fixture|operator-measured --labor-hourly 80 --tool-cost 10 --pilot-price 750"
+    [
+      "Usage:",
+      "  npm run a11y:simulate-service -- --baseline baseline.json --current current.json --review-session review-session.json --labor-hourly 80 --pilot-price 750",
+      "  npm run a11y:simulate-service -- --baseline baseline.json --current current.json --review-minutes 30 --review-source fixture --labor-hourly 80 --tool-cost 10 --pilot-price 750"
+    ].join("\n")
   );
 }
 
@@ -41,13 +48,36 @@ function parseArgs(args: string[]): ParsedArgs {
     const key = args[index];
     const value = args[index + 1];
     if (!key?.startsWith("--") || value === undefined || value.startsWith("--")) usage();
+    if (values.has(key)) throw new Error(`${key} may be provided only once`);
     values.set(key, value);
   }
 
   const baseline = values.get("--baseline");
   const current = values.get("--current");
+  if (!baseline || !current) usage();
+
+  const reviewSession = values.get("--review-session");
+  const hasManualReviewInput =
+    values.has("--review-minutes") || values.has("--review-source") || values.has("--tool-cost");
+
+  if (reviewSession && hasManualReviewInput) {
+    throw new Error("--review-session cannot be combined with --review-minutes, --review-source, or --tool-cost");
+  }
+
+  if (reviewSession) {
+    return {
+      baseline,
+      current,
+      reviewSession,
+      laborCostPerHourCents: dollarsToCents(values.get("--labor-hourly"), "labor-hourly"),
+      pilotPriceCents: dollarsToCents(values.get("--pilot-price"), "pilot-price", false)
+    };
+  }
+
   const source = values.get("--review-source");
-  if (!baseline || !current || (source !== "fixture" && source !== "operator-measured")) usage();
+  if (source !== "fixture") {
+    throw new Error("Manual review-minute input is fixture-only; use --review-session for operator-measured time");
+  }
 
   return {
     baseline,
@@ -99,17 +129,27 @@ async function main(): Promise<void> {
     loadEvidence(args.current, "current")
   ]);
 
-  const report = buildAccessibilityServiceReport(
-    baseline,
-    current,
-    {
-      reviewMinutes: args.reviewMinutes,
-      reviewMinutesSource: args.reviewMinutesSource,
-      laborCostPerHourCents: args.laborCostPerHourCents,
-      toolCostCents: args.toolCostCents,
-      pilotPriceCents: args.pilotPriceCents
-    }
-  );
+  const report = args.reviewSession
+    ? buildAccessibilityServiceReportFromReviewSession(
+        baseline,
+        current,
+        parseCompletedAccessibilityReviewSession(JSON.parse(await readFile(args.reviewSession, "utf8"))),
+        {
+          laborCostPerHourCents: args.laborCostPerHourCents,
+          pilotPriceCents: args.pilotPriceCents
+        }
+      )
+    : buildAccessibilityServiceReport(
+        baseline,
+        current,
+        {
+          reviewMinutes: args.reviewMinutes!,
+          reviewMinutesSource: args.reviewMinutesSource!,
+          laborCostPerHourCents: args.laborCostPerHourCents,
+          toolCostCents: args.toolCostCents!,
+          pilotPriceCents: args.pilotPriceCents
+        }
+      );
 
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 }
