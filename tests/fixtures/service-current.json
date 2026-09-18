@@ -1,0 +1,17 @@
+{
+  "evidence": [
+    {
+      "id": "current",
+      "fact": "CI accessibility summary",
+      "source": "https://example.invalid/",
+      "observedAt": "2026-09-17T12:05:00.000Z",
+      "metadata": {
+        "kind": "automated-accessibility-scan-summary",
+        "fingerprints": [
+          "error::rule-a::#a",
+          "error::rule-b::#b"
+        ]
+      }
+    }
+  ]
+}
