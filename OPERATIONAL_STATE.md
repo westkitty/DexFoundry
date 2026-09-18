@@ -3,8 +3,8 @@
 - **Project ID:** dexfoundry
 - **Project:** DexFoundry
 - **Repository:** westkitty/DexFoundry
-- **Revision:** 9
-- **State:** active-first-offer-outbound-locked
+- **Revision:** 10
+- **State:** active-first-offer-internal-service-simulation-outbound-locked
 
 ## Purpose
 
@@ -43,6 +43,9 @@ Implemented in source:
 - `evaluateOutboundPolicy()` and `FoundryRepository.evaluateOutboundPermission()` combine global mode, suppression, and manual approval into one deterministic decision.
 - `npm run outbound:check -- [email] [domain]` is a read-only permission probe that exits blocked when delivery is not allowed.
 - Current active rule: **no external prospect or customer messages may be sent**. Prepared drafts and POCs may remain internal, but no externally visible delivery action is authorized.
+- `buildAccessibilityServiceReport()` produces internal-only NEW/PERSISTING/RESOLVED delivery reports with `externalDeliveryAllowed: false`, `requiresHumanReview: true`, and `conformanceDetermination: false`.
+- `modelAccessibilityServiceEconomics()` accepts explicit review minutes, labor cost, tool cost, and pilot price; it distinguishes fixture timing from operator-measured timing and never labels modeled contribution as realized profit or commercial proof.
+- `npm run a11y:simulate-service -- ...` consumes stored baseline/current evidence JSON and produces the bounded internal service report without contacting anyone or mutating outbound state.
 
 ## Verified
 
@@ -82,6 +85,8 @@ At commit `cf1950c8623d6c9a6abdf50fd5f09ecb5a3b3831`, GitHub Actions run `352851
 
 GitHub repository existence and write access remain verified.
 
+At commit `5234cef464bdf42c120cd0caa65ac18ae7311268`, GitHub Actions run `35291349192` passed the complete validation path after adding the internal service simulator and a compiled-CLI integration test. The suite verified TypeScript/build, unit tests for report classification and modeled economics, invocation of the compiled `a11y:simulate-service` CLI against stored fixture evidence, the browser-backed Pa11y proof, all PostgreSQL migration/idempotency/default-deny proofs, and the signed n8n duplicate-delivery loop. The fixture CLI proof produced a MIXED_CHANGE report with one new, one persisting, and one resolved signature while preserving `externalDeliveryAllowed: false` and `SIMULATION_ONLY` economics.
+
 ## Implemented but unverified
 
 - Long-interval stability/repeatability across real public sites and actual site changes.
@@ -91,17 +96,20 @@ GitHub repository existence and write access remain verified.
 - Production secret rotation and deployment-specific secret storage.
 - Apollo enrichment integration.
 - Any real outbound email path.
-- Customer delivery/reporting implementation for Accessibility Regression Watch.
+- Customer delivery/reporting implementation for Accessibility Regression Watch outside the internal simulation boundary.
+- Actual human review minutes for a complete internal service pass; no operator-measured workload has been recorded yet.
+- Real service direct-cost/margin evidence; current economics remain input-based modeling only.
 - Local MacBook checkout parity with the GitHub repository; GitHub/CI remains the verified source baseline for this revision.
 
 ## Pending
 
 1. Keep all external prospect/customer messaging disabled unless the user later explicitly changes this rule.
-2. Continue only non-messaging work: scanner quality, regression reporting, delivery design, pricing analysis, simulation, fixtures, and internal buyer-proof refinement.
-3. Measure actual human review time on a controlled/internal service pass before estimating service margin.
-4. Add deliverability, suppression, rate, campaign-approval, audit, and sender-edge controls before any future outbound enablement is considered.
-5. Re-run the manual-proof-to-automation gate only after buyer-proof strategy changes or outbound is explicitly reconsidered.
-6. Local MacBook checkout parity with GitHub main remains unverified.
+2. Run one complete internal Accessibility Regression Watch service pass with **operator-measured** review time and record pages reviewed, noise removed, judgment/escalation count, report-edit time, failed/blocked scan work, and direct tool cost.
+3. Use that measured timing only as an input to the internal simulator; do not promote modeled contribution to realized margin or commercial proof.
+4. Continue non-messaging work on report quality, delivery ergonomics, scanner noise reduction, and service-cost evidence.
+5. Add deliverability, suppression, rate, campaign-approval, audit, and sender-edge controls before any future outbound enablement is considered.
+6. Re-run the manual-proof-to-automation gate only after buyer-proof strategy changes or outbound is explicitly reconsidered.
+7. Local MacBook checkout parity with GitHub main remains unverified.
 
 ## Protected invariants
 
@@ -126,6 +134,9 @@ GitHub repository existence and write access remain verified.
 - Runtime proof on a controlled fixture does not count as target-market or commercial proof.
 
 ## Revision history
+
+### Revision 10 - 2026-09-17
+Added the first bounded internal service-delivery simulator for Accessibility Regression Watch without weakening the outbound lock. `accessibilityServiceReport.ts` converts two stored evidence sets into NEW/PERSISTING/RESOLVED deltas, an internal change state, and explicit input-based service economics. `accessibility-service-simulate.ts` exposes the workflow as `npm run a11y:simulate-service`. Reports are hard-marked `simulation: true`, `externalDeliveryAllowed: false`, `requiresHumanReview: true`, and `conformanceDetermination: false`. Review time must be explicitly labeled `fixture` or `operator-measured`; even operator-measured timing still yields modeled costs, not realized profit or buyer proof. Stored fixtures and `tests/accessibilityServiceCli.test.ts` exercise the compiled CLI path. GitHub Actions run `35291349192` at commit `5234cef464bdf42c120cd0caa65ac18ae7311268` passed the full build/unit/scanner/Postgres/n8n regression chain. No external message was sent. Project state advances to **active-first-offer-internal-service-simulation-outbound-locked**.
 
 ### Revision 9 - 2026-09-17
 Converted the current no-message instruction into a default-deny control-plane rule instead of relying on conversation memory. Added migration `004_outbound_controls.sql` with global mode `DISABLED`, the deterministic outbound policy model, repository-level suppression-aware permission evaluation, a read-only `outbound:check` CLI, unit coverage for DISABLED/MANUAL_ONLY/ENABLED behavior, and live PostgreSQL smoke assertions proving both global default-deny and suppression blocking. GitHub Actions run `35288828797` passed build/tests, migration 004, idempotent migration, accessibility fixture proof, live Postgres smoke proving global default-deny and suppression blocking, and the unchanged signed n8n regression chain. The final-head run `35288910325` at commit `a598beb30fe4a8ea04fb23e24ab4952d1d41cc33` also passed after adding `guardedOutboundSend()`: unit tests prove blocked decisions do not invoke the transport at all, while an allowed decision is the only path that calls the transport. `docs/OUTBOUND_POLICY.md` records the rule. No external message was sent. The existing Gmail draft remains unsent and is not authorization to deliver. Project state remains **active-first-offer-outbound-locked**.
