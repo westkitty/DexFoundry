@@ -1,6 +1,6 @@
 {
   "name": "dexfoundry",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "Autonomous B2B service operations engine.",
@@ -16,6 +16,7 @@
     "n8n:proof:replay": "node dist/src/cli/n8n-proof-replay.js",
     "n8n:proof:assert": "node dist/src/cli/n8n-proof-assert.js",
     "a11y:manual-proof": "node dist/src/cli/accessibility-manual-proof.js",
+    "a11y:simulate-service": "node dist/src/cli/accessibility-service-simulate.js",
     "outbound:check": "node dist/src/cli/outbound-check.js"
   },
   "engines": {
