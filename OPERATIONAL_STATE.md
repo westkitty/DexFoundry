@@ -3,8 +3,8 @@
 - **Project ID:** dexfoundry
 - **Project:** DexFoundry
 - **Repository:** westkitty/DexFoundry
-- **Revision:** 10
-- **State:** active-first-offer-internal-service-simulation-outbound-locked
+- **Revision:** 11
+- **State:** active-first-offer-operator-measurement-ready-outbound-locked
 
 ## Purpose
 
@@ -46,6 +46,10 @@ Implemented in source:
 - `buildAccessibilityServiceReport()` produces internal-only NEW/PERSISTING/RESOLVED delivery reports with `externalDeliveryAllowed: false`, `requiresHumanReview: true`, and `conformanceDetermination: false`.
 - `modelAccessibilityServiceEconomics()` accepts explicit review minutes, labor cost, tool cost, and pilot price; it distinguishes fixture timing from operator-measured timing and never labels modeled contribution as realized profit or commercial proof.
 - `npm run a11y:simulate-service -- ...` consumes stored baseline/current evidence JSON and produces the bounded internal service report without contacting anyone or mutating outbound state.
+- `npm run a11y:review-session -- start|finish ...` captures a bounded operator review session with start/end timestamps, pauses, pages reviewed, noise removed, judgment escalations, report-edit minutes, failed/blocked scans, direct tool cost, and optional notes.
+- Completed review sessions recompute elapsed and active minutes from timestamps and pauses; inconsistent or tampered derived timing is rejected.
+- Operator-measured service economics may only enter through a completed review-session record. The simulator rejects combining `--review-session` with hand-entered review minutes/source/tool cost.
+- Package version is `0.8.0`.
 
 ## Verified
 
@@ -87,6 +91,8 @@ GitHub repository existence and write access remain verified.
 
 At commit `5234cef464bdf42c120cd0caa65ac18ae7311268`, GitHub Actions run `35291349192` passed the complete validation path after adding the internal service simulator and a compiled-CLI integration test. The suite verified TypeScript/build, unit tests for report classification and modeled economics, invocation of the compiled `a11y:simulate-service` CLI against stored fixture evidence, the browser-backed Pa11y proof, all PostgreSQL migration/idempotency/default-deny proofs, and the signed n8n duplicate-delivery loop. The fixture CLI proof produced a MIXED_CHANGE report with one new, one persisting, and one resolved signature while preserving `externalDeliveryAllowed: false` and `SIMULATION_ONLY` economics.
 
+At commit `d8169571c8223b11289ba69a624a4d5c50641386`, GitHub Actions run `35293135536` passed the complete validation path after adding operator review-session capture and measured-evidence routing. Tests verify timestamp/pause-derived active minutes, rejection of impossible timing and tampered derived minutes, completed-session service economics, compiled simulator use of a completed session, rejection of mixed review-session/manual-minute inputs, and preservation of all scanner/Postgres/n8n/outbound-lock regressions.
+
 ## Implemented but unverified
 
 - Long-interval stability/repeatability across real public sites and actual site changes.
@@ -97,19 +103,20 @@ At commit `5234cef464bdf42c120cd0caa65ac18ae7311268`, GitHub Actions run `352913
 - Apollo enrichment integration.
 - Any real outbound email path.
 - Customer delivery/reporting implementation for Accessibility Regression Watch outside the internal simulation boundary.
-- Actual human review minutes for a complete internal service pass; no operator-measured workload has been recorded yet.
+- Actual human review minutes for a complete internal service pass; the capture workflow is verified but no genuine operator session has been recorded yet.
 - Real service direct-cost/margin evidence; current economics remain input-based modeling only.
 - Local MacBook checkout parity with the GitHub repository; GitHub/CI remains the verified source baseline for this revision.
 
 ## Pending
 
 1. Keep all external prospect/customer messaging disabled unless the user later explicitly changes this rule.
-2. Run one complete internal Accessibility Regression Watch service pass with **operator-measured** review time and record pages reviewed, noise removed, judgment/escalation count, report-edit time, failed/blocked scan work, and direct tool cost.
-3. Use that measured timing only as an input to the internal simulator; do not promote modeled contribution to realized margin or commercial proof.
-4. Continue non-messaging work on report quality, delivery ergonomics, scanner noise reduction, and service-cost evidence.
-5. Add deliverability, suppression, rate, campaign-approval, audit, and sender-edge controls before any future outbound enablement is considered.
-6. Re-run the manual-proof-to-automation gate only after buyer-proof strategy changes or outbound is explicitly reconsidered.
-7. Local MacBook checkout parity with GitHub main remains unverified.
+2. Run one genuine complete internal Accessibility Regression Watch pass using `a11y:review-session start` before review and `finish` afterward.
+3. Feed that completed record into `a11y:simulate-service --review-session ...`; treat the result as measured workload plus modeled economics only.
+4. Record what scanner noise and judgment work actually consumed operator time, then improve report ergonomics/noise reduction from that evidence.
+5. Do not treat the fixture review-session file as operator evidence; it is CI-only.
+6. Add deliverability, suppression, rate, campaign-approval, audit, and sender-edge controls before any future outbound enablement is considered.
+7. Re-run the manual-proof-to-automation gate only after buyer-proof strategy changes or outbound is explicitly reconsidered.
+8. Local MacBook checkout parity with GitHub main remains unverified.
 
 ## Protected invariants
 
@@ -134,6 +141,9 @@ At commit `5234cef464bdf42c120cd0caa65ac18ae7311268`, GitHub Actions run `352913
 - Runtime proof on a controlled fixture does not count as target-market or commercial proof.
 
 ## Revision history
+
+### Revision 11 - 2026-09-17
+Added an explicit operator-review measurement contract so future service economics cannot convert guessed minutes into measured evidence. `accessibilityReviewSession.ts` models IN_PROGRESS and COMPLETE sessions, derives elapsed/active minutes from timestamps and pauses, records workload/noise/judgment/failure/tool-cost metrics, and rejects impossible or tampered timing. `a11y:review-session start|finish` creates and completes local review-session JSON records. `a11y:simulate-service --review-session ...` now takes measured minutes and direct tool cost only from a validated COMPLETE session and rejects mixed manual overrides. Hand-entered minutes are fixture-only. GitHub Actions run `35293135536` at commit `d8169571c8223b11289ba69a624a4d5c50641386` passed the full build/unit/browser-scanner/Postgres/n8n regression chain. No genuine operator session has been recorded yet and no external message was sent. Project state advances to **active-first-offer-operator-measurement-ready-outbound-locked**.
 
 ### Revision 10 - 2026-09-17
 Added the first bounded internal service-delivery simulator for Accessibility Regression Watch without weakening the outbound lock. `accessibilityServiceReport.ts` converts two stored evidence sets into NEW/PERSISTING/RESOLVED deltas, an internal change state, and explicit input-based service economics. `accessibility-service-simulate.ts` exposes the workflow as `npm run a11y:simulate-service`. Reports are hard-marked `simulation: true`, `externalDeliveryAllowed: false`, `requiresHumanReview: true`, and `conformanceDetermination: false`. Review time must be explicitly labeled `fixture` or `operator-measured`; even operator-measured timing still yields modeled costs, not realized profit or buyer proof. Stored fixtures and `tests/accessibilityServiceCli.test.ts` exercise the compiled CLI path. GitHub Actions run `35291349192` at commit `5234cef464bdf42c120cd0caa65ac18ae7311268` passed the full build/unit/scanner/Postgres/n8n regression chain. No external message was sent. Project state advances to **active-first-offer-internal-service-simulation-outbound-locked**.
